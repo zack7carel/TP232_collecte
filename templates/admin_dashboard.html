@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin - Formulaires</title>
+    <style>
+        body { font-family: Arial; margin: 40px; }
+        .formulaire { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .lien { color: blue; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>📋 Mes formulaires dynamiques</h1>
+    <a href="/admin/creer_formulaire">➕ Créer un nouveau formulaire</a>
+    <hr>
+    
+    {% for formulaire in formulaires %}
+    <div class="formulaire">
+        <h3>{{ formulaire[1] }}</h3>
+        <p>Lien unique : <span class="lien">/f/{{ formulaire[2] }}</span></p>
+        <p>Créé le : {{ formulaire[3] }}</p>
+        <a href="/admin/formulaire/{{ formulaire[0] }}/champs">✏️ Gérer les champs</a> |
+        <a href="/admin/formulaire/{{ formulaire[0] }}/reponses">📊 Voir les réponses</a> |
+        <a href="/f/{{ formulaire[2] }}" target="_blank">🔗 Voir le formulaire</a>
+    </div>
+    {% endfor %}
+    
+    <hr>
+    <a href="/data">📋 Ancien formulaire (users)</a> |
+    <a href="/logout">🚪 Déconnexion</a>
+</body>
+</html>

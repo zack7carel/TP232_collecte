@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ajouter des champs</title>
+    <style>
+        .champ { border: 1px solid #ddd; margin: 10px 0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Formulaire : {{ formulaire[1] }}</h1>
+    
+    <h2>➕ Ajouter un champ</h2>
+    <form method="POST">
+        <label>Label :</label>
+        <input type="text" name="label" required><br>
+        
+        <label>Type :</label>
+        <select name="type_champ">
+            <option value="text">Texte court</option>
+            <option value="email">Email</option>
+            <option value="number">Nombre</option>
+            <option value="textarea">Texte long</option>
+            <option value="select">Liste déroulante</option>
+        </select><br>
+        
+        <label>Options (pour liste déroulante, séparées par des virgules) :</label>
+        <input type="text" name="options" placeholder="ex: Oui,Non,Peut-être"><br>
+        
+        <label>
+            <input type="checkbox" name="obligatoire"> Champ obligatoire
+        </label><br><br>
+        
+        <button type="submit" name="ajouter_autre">➕ Ajouter un autre champ</button>
+        <button type="submit">✅ Terminer</button>
+    </form>
+    
+    <h2>📋 Champs existants</h2>
+    {% for champ in champs %}
+    <div class="champ">
+        <strong>{{ champ[2] }}</strong> ({{ champ[3] }}) 
+        {% if champ[5] %}⚠️ obligatoire{% endif %}
+        <a href="/admin/formulaire/{{ formulaire_id }}/supprimer_champ/{{ champ[0] }}">🗑️ Supprimer</a>
+    </div>
+    {% endfor %}
+    
+    <a href="/admin">⬅️ Retour au tableau de bord</a>
+</body>
+</html>

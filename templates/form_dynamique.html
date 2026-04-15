@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ formulaire[1] }}</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 40px auto; }
+        input, select, textarea { width: 100%; margin: 10px 0; padding: 8px; }
+        button { background: blue; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>{{ formulaire[1] }}</h1>
+    
+    <form method="POST" action="/f/{{ formulaire[2] }}/soumettre">
+        {% for champ in champs %}
+        <div>
+            <label>
+                {{ champ[2] }}
+                {% if champ[5] %} *{% endif %}
+            </label>
+            
+            {% if champ[3] == 'textarea' %}
+                <textarea name="champ_{{ champ[0] }}" {% if champ[5] %}required{% endif %}></textarea>
+                
+            {% elif champ[3] == 'select' %}
+                <select name="champ_{{ champ[0] }}" {% if champ[5] %}required{% endif %}>
+                    {% for option in champ[4].split(',') %}
+                        <option value="{{ option.strip() }}">{{ option.strip() }}</option>
+                    {% endfor %}
+                </select>
+                
+            {% else %}
+                <input type="{{ champ[3] }}" name="champ_{{ champ[0] }}" {% if champ[5] %}required{% endif %}>
+            {% endif %}
+        </div>
+        {% endfor %}
+        
+        <button type="submit">Envoyer ✅</button>
+    </form>
+</body>
+</html>
