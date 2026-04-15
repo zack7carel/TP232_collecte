@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Collecte de données</title>
+</head>
+<body>
+
+    <!-- Message de succès -->
+    {% if message %}
+        <p style="color: green; font-weight: bold;">{{ message }}</p>
+    {% endif %}
+
+    <h2>Formulaire de collecte</h2>
+
+    <form method="POST" action="/submit">
+        
+        <input type="text" name="nom" placeholder="Nom" required><br><br>
+
+        <input type="text" name="prenom" placeholder="Prénom" required><br><br>
+
+        <input type="text" name="telephone" placeholder="Téléphone" required><br><br>
+
+        <input type="email" name="email" placeholder="Email" required><br><br>
+
+        <input type="text" name="matricule" placeholder="Matricule" required><br><br>
+
+        <select name="sexe" required>
+            <option value="" disabled selected>Choisir le sexe</option>
+            <option value="M">Masculin</option>
+            <option value="F">Féminin</option>
+        </select>
+
+        <br><br>
+
+        <button type="submit">Envoyer</button>
+
+    </form>
+
+    <br><hr><br>
+
+    <!-- Navigation -->
+    <div>
+        <a href="/data">📊 Voir les données collectées</a>
+        <br><br>
+        <a href="/login">🔐 Admin (connexion)</a>
+    </div>
+
+</body>
+</html>
