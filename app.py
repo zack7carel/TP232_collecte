@@ -9,13 +9,16 @@ app = Flask(__name__)
 app.secret_key = "secret123"
 
 # ================= DATABASE =================
+DB_NAME = "data.db"
+
 def get_db():
-    return sqlite3.connect('data.db')
+    return sqlite3.connect(DB_NAME)
 
 def init_db():
     conn = get_db()
     c = conn.cursor()
 
+    # TABLE FORMULAIRES
     c.execute('''
         CREATE TABLE IF NOT EXISTS formulaires (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,6 +27,7 @@ def init_db():
         )
     ''')
 
+    # TABLE CHAMPS
     c.execute('''
         CREATE TABLE IF NOT EXISTS champs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,6 +40,7 @@ def init_db():
         )
     ''')
 
+    # TABLE REPONSES
     c.execute('''
         CREATE TABLE IF NOT EXISTS reponses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,10 +51,11 @@ def init_db():
 
     conn.commit()
     conn.close()
+    print("DATABASE READY")
 
 init_db()
 
-# ================= PAGE D'ACCUEIL = CREATION =================
+# ================= PAGE ACCUEIL (CREATION FORMULAIRE) =================
 @app.route("/", methods=["GET", "POST"])
 def creer_formulaire():
     try:
@@ -60,8 +66,10 @@ def creer_formulaire():
             conn = get_db()
             c = conn.cursor()
 
-            c.execute("INSERT INTO formulaires (titre, lien_unique) VALUES (?, ?)",
-                      (titre, lien_unique))
+            c.execute(
+                "INSERT INTO formulaires (titre, lien_unique) VALUES (?, ?)",
+                (titre, lien_unique)
+            )
 
             conn.commit()
             formulaire_id = c.lastrowid
@@ -72,50 +80,64 @@ def creer_formulaire():
         return render_template("creer_formulaire.html")
 
     except Exception as e:
-        return f"ERREUR: {str(e)}"
+        print(traceback.format_exc())
+        return f"ERROR CREATE FORM: {e}"
 
 # ================= AJOUT CHAMPS =================
 @app.route("/formulaire/<int:formulaire_id>/champs", methods=["GET", "POST"])
 def ajouter_champs(formulaire_id):
-    conn = get_db()
-    c = conn.cursor()
+    try:
+        conn = get_db()
+        c = conn.cursor()
 
-    if request.method == "POST":
-        label = request.form["label"]
-        type_champ = request.form["type_champ"]
-        options = request.form.get("options", "")
-        obligatoire = 1 if request.form.get("obligatoire") else 0
+        if request.method == "POST":
+            label = request.form["label"]
+            type_champ = request.form["type_champ"]
+            options = request.form.get("options", "")
+            obligatoire = 1 if request.form.get("obligatoire") else 0
 
-        c.execute("SELECT COUNT(*) FROM champs WHERE formulaire_id = ?", (formulaire_id,))
-        ordre = c.fetchone()[0]
+            c.execute(
+                "SELECT COUNT(*) FROM champs WHERE formulaire_id = ?",
+                (formulaire_id,)
+            )
+            ordre = c.fetchone()[0]
 
-        c.execute('''
-            INSERT INTO champs (formulaire_id, label, type_champ, options, obligatoire, ordre)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (formulaire_id, label, type_champ, options, obligatoire, ordre))
+            c.execute('''
+                INSERT INTO champs (formulaire_id, label, type_champ, options, obligatoire, ordre)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (formulaire_id, label, type_champ, options, obligatoire, ordre))
 
-        conn.commit()
+            conn.commit()
 
-        if "terminer" in request.form:
-            c.execute("SELECT lien_unique FROM formulaires WHERE id = ?", (formulaire_id,))
-            lien = c.fetchone()[0]
-            conn.close()
+            if "terminer" in request.form:
+                c.execute(
+                    "SELECT lien_unique FROM formulaires WHERE id = ?",
+                    (formulaire_id,)
+                )
+                lien = c.fetchone()[0]
+                conn.close()
 
-            url = url_for("afficher_formulaire", lien_unique=lien, _external=True)
+                url = url_for("afficher_formulaire", lien_unique=lien, _external=True)
 
-            return f"""
-            <h2>Formulaire créé ✅</h2>
-            <p>Lien public :</p>
-            <a href="{url}">{url}</a>
-            """
+                return f"""
+                <h2>Formulaire créé ✅</h2>
+                <a href="{url}">{url}</a>
+                """
 
-        return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
+            return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
 
-    c.execute("SELECT * FROM champs WHERE formulaire_id = ?", (formulaire_id,))
-    champs = c.fetchall()
-    conn.close()
+        c.execute(
+            "SELECT * FROM champs WHERE formulaire_id = ? ORDER BY ordre",
+            (formulaire_id,)
+        )
+        champs = c.fetchall()
+        conn.close()
 
-    return render_template("ajouter_champs.html", champs=champs, formulaire_id=formulaire_id)
+        return render_template("ajouter_champs.html", champs=champs, formulaire_id=formulaire_id)
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR CHAMPS: {e}"
 
 # ================= FORMULAIRE PUBLIC =================
 @app.route("/f/<lien_unique>")
@@ -129,8 +151,10 @@ def afficher_formulaire(lien_unique):
     if not formulaire:
         return "Formulaire introuvable ❌", 404
 
-    c.execute("SELECT * FROM champs WHERE formulaire_id = ? ORDER BY ordre",
-              (formulaire[0],))
+    c.execute(
+        "SELECT * FROM champs WHERE formulaire_id = ? ORDER BY ordre",
+        (formulaire[0],)
+    )
     champs = c.fetchall()
 
     conn.close()
@@ -140,41 +164,50 @@ def afficher_formulaire(lien_unique):
 # ================= SOUMISSION =================
 @app.route("/f/<lien_unique>/submit", methods=["POST"])
 def soumettre(lien_unique):
-    conn = get_db()
-    c = conn.cursor()
+    try:
+        conn = get_db()
+        c = conn.cursor()
 
-    c.execute("SELECT id FROM formulaires WHERE lien_unique = ?", (lien_unique,))
-    formulaire = c.fetchone()
+        c.execute("SELECT id FROM formulaires WHERE lien_unique = ?", (lien_unique,))
+        formulaire = c.fetchone()
 
-    if not formulaire:
-        return "Formulaire introuvable ❌", 404
+        if not formulaire:
+            return "Formulaire introuvable ❌", 404
 
-    formulaire_id = formulaire[0]
+        formulaire_id = formulaire[0]
 
-    c.execute("SELECT id, label, obligatoire FROM champs WHERE formulaire_id = ?",
-              (formulaire_id,))
-    champs = c.fetchall()
+        c.execute(
+            "SELECT id, label, obligatoire FROM champs WHERE formulaire_id = ?",
+            (formulaire_id,)
+        )
+        champs = c.fetchall()
 
-    donnees = {}
+        donnees = {}
 
-    for champ in champs:
-        champ_id = champ[0]
-        valeur = request.form.get(f"champ_{champ_id}", "")
+        for champ in champs:
+            champ_id = champ[0]
+            valeur = request.form.get(f"champ_{champ_id}", "")
 
-        if champ[2] == 1 and not valeur:
-            return f"Champ '{champ[1]}' obligatoire ❌"
+            if champ[2] == 1 and not valeur:
+                return f"Champ '{champ[1]}' obligatoire ❌"
 
-        donnees[str(champ_id)] = valeur
+            donnees[str(champ_id)] = valeur
 
-    c.execute("INSERT INTO reponses (formulaire_id, donnees) VALUES (?, ?)",
-              (formulaire_id, json.dumps(donnees)))
+        c.execute(
+            "INSERT INTO reponses (formulaire_id, donnees) VALUES (?, ?)",
+            (formulaire_id, json.dumps(donnees))
+        )
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
 
-    return "<h2>✅ Réponse enregistrée</h2>"
+        return "<h2>✅ Réponse enregistrée</h2>"
 
-# ================= ADMIN (CONSULTATION UNIQUEMENT) =================
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR SUBMIT: {e}"
+
+# ================= ADMIN =================
 @app.route("/admin")
 def admin():
     if not session.get("logged_in"):
@@ -197,7 +230,7 @@ def login():
         if request.form["username"] == "admin" and request.form["password"] == "1234":
             session["logged_in"] = True
             return redirect(url_for("admin"))
-        return "Erreur ❌"
+        return "Erreur login ❌"
 
     return render_template("login.html")
 
