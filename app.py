@@ -88,16 +88,26 @@ def ajouter_champs(formulaire_id):
         conn = get_db()
         c = conn.cursor()
 
+        # 🔥 Vérifier que le formulaire existe
+        c.execute("SELECT * FROM formulaires WHERE id = ?", (formulaire_id,))
+        formulaire = c.fetchone()
+
+        if formulaire is None:
+            conn.close()
+            return f"Formulaire avec ID {formulaire_id} introuvable ❌"
+
         if request.method == "POST":
-            label = request.form["label"]
-            type_champ = request.form["type_champ"]
+            label = request.form.get("label")
+            type_champ = request.form.get("type_champ")
             options = request.form.get("options", "")
             obligatoire = 1 if request.form.get("obligatoire") else 0
 
-            c.execute(
-                "SELECT COUNT(*) FROM champs WHERE formulaire_id = ?",
-                (formulaire_id,)
-            )
+            # 🔥 sécurité champ vide
+            if not label or not type_champ:
+                return "Label ou type manquant ❌"
+
+            # ordre automatique
+            c.execute("SELECT COUNT(*) FROM champs WHERE formulaire_id = ?", (formulaire_id,))
             ordre = c.fetchone()[0]
 
             c.execute('''
@@ -107,13 +117,16 @@ def ajouter_champs(formulaire_id):
 
             conn.commit()
 
-            # Si on termine
+            # 🔥 bouton TERMINER
             if "terminer" in request.form:
-                c.execute(
-                    "SELECT lien_unique FROM formulaires WHERE id = ?",
-                    (formulaire_id,)
-                )
-                lien = c.fetchone()["lien_unique"]
+                c.execute("SELECT lien_unique FROM formulaires WHERE id = ?", (formulaire_id,))
+                result = c.fetchone()
+
+                if result is None:
+                    conn.close()
+                    return "Erreur récupération lien ❌"
+
+                lien = result["lien_unique"]
                 conn.close()
 
                 url = url_for("afficher_formulaire", lien_unique=lien, _external=True)
@@ -126,29 +139,23 @@ def ajouter_champs(formulaire_id):
 
             return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
 
-        # 🔥 CORRECTION ICI
-        c.execute("SELECT * FROM formulaires WHERE id = ?", (formulaire_id,))
-        formulaire = c.fetchone()
-
-        c.execute(
-            "SELECT * FROM champs WHERE formulaire_id = ? ORDER BY ordre",
-            (formulaire_id,)
-        )
+        # 🔥 récupération des champs
+        c.execute("SELECT * FROM champs WHERE formulaire_id = ? ORDER BY ordre", (formulaire_id,))
         champs = c.fetchall()
 
         conn.close()
 
         return render_template(
             "ajouter_champs.html",
+            formulaire=formulaire,
             champs=champs,
-            formulaire=formulaire,  # 🔥 IMPORTANT
             formulaire_id=formulaire_id
         )
 
     except Exception as e:
+        import traceback
         print(traceback.format_exc())
         return f"ERROR CHAMPS: {e}"
-
 # ================= FORMULAIRE PUBLIC =================
 @app.route("/f/<lien_unique>")
 def afficher_formulaire(lien_unique):
