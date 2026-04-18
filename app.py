@@ -8,17 +8,18 @@ from flask import Flask, render_template, request, redirect, url_for, session
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-# ================= DATABASE =================
 DB_NAME = "data.db"
 
+# ================= DATABASE =================
 def get_db():
-    return sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row  # 🔥 permet d'utiliser formulaire["titre"]
+    return conn
 
 def init_db():
     conn = get_db()
     c = conn.cursor()
 
-    # TABLE FORMULAIRES
     c.execute('''
         CREATE TABLE IF NOT EXISTS formulaires (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +28,6 @@ def init_db():
         )
     ''')
 
-    # TABLE CHAMPS
     c.execute('''
         CREATE TABLE IF NOT EXISTS champs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +40,6 @@ def init_db():
         )
     ''')
 
-    # TABLE REPONSES
     c.execute('''
         CREATE TABLE IF NOT EXISTS reponses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,11 +50,10 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print("DATABASE READY")
 
 init_db()
 
-# ================= PAGE ACCUEIL (CREATION FORMULAIRE) =================
+# ================= CREATION FORMULAIRE =================
 @app.route("/", methods=["GET", "POST"])
 def creer_formulaire():
     try:
@@ -109,31 +107,43 @@ def ajouter_champs(formulaire_id):
 
             conn.commit()
 
+            # Si on termine
             if "terminer" in request.form:
                 c.execute(
                     "SELECT lien_unique FROM formulaires WHERE id = ?",
                     (formulaire_id,)
                 )
-                lien = c.fetchone()[0]
+                lien = c.fetchone()["lien_unique"]
                 conn.close()
 
                 url = url_for("afficher_formulaire", lien_unique=lien, _external=True)
 
                 return f"""
                 <h2>Formulaire créé ✅</h2>
+                <p>Lien public :</p>
                 <a href="{url}">{url}</a>
                 """
 
             return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
+
+        # 🔥 CORRECTION ICI
+        c.execute("SELECT * FROM formulaires WHERE id = ?", (formulaire_id,))
+        formulaire = c.fetchone()
 
         c.execute(
             "SELECT * FROM champs WHERE formulaire_id = ? ORDER BY ordre",
             (formulaire_id,)
         )
         champs = c.fetchall()
+
         conn.close()
 
-        return render_template("ajouter_champs.html", champs=champs, formulaire_id=formulaire_id)
+        return render_template(
+            "ajouter_champs.html",
+            champs=champs,
+            formulaire=formulaire,  # 🔥 IMPORTANT
+            formulaire_id=formulaire_id
+        )
 
     except Exception as e:
         print(traceback.format_exc())
@@ -153,7 +163,7 @@ def afficher_formulaire(lien_unique):
 
     c.execute(
         "SELECT * FROM champs WHERE formulaire_id = ? ORDER BY ordre",
-        (formulaire[0],)
+        (formulaire["id"],)
     )
     champs = c.fetchall()
 
@@ -174,7 +184,7 @@ def soumettre(lien_unique):
         if not formulaire:
             return "Formulaire introuvable ❌", 404
 
-        formulaire_id = formulaire[0]
+        formulaire_id = formulaire["id"]
 
         c.execute(
             "SELECT id, label, obligatoire FROM champs WHERE formulaire_id = ?",
@@ -185,11 +195,11 @@ def soumettre(lien_unique):
         donnees = {}
 
         for champ in champs:
-            champ_id = champ[0]
+            champ_id = champ["id"]
             valeur = request.form.get(f"champ_{champ_id}", "")
 
-            if champ[2] == 1 and not valeur:
-                return f"Champ '{champ[1]}' obligatoire ❌"
+            if champ["obligatoire"] == 1 and not valeur:
+                return f"Champ '{champ['label']}' obligatoire ❌"
 
             donnees[str(champ_id)] = valeur
 
