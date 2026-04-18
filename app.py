@@ -2,6 +2,7 @@ import os
 import sqlite3
 import json
 import secrets
+import traceback
 from flask import Flask, render_template, request, redirect, url_for, session
 
 app = Flask(__name__)
@@ -51,23 +52,27 @@ init_db()
 # ================= PAGE D'ACCUEIL = CREATION =================
 @app.route("/", methods=["GET", "POST"])
 def creer_formulaire():
-    if request.method == "POST":
-        titre = request.form["titre"]
-        lien_unique = secrets.token_urlsafe(8)
+    try:
+        if request.method == "POST":
+            titre = request.form["titre"]
+            lien_unique = secrets.token_urlsafe(8)
 
-        conn = get_db()
-        c = conn.cursor()
+            conn = get_db()
+            c = conn.cursor()
 
-        c.execute("INSERT INTO formulaires (titre, lien_unique) VALUES (?, ?)",
-                  (titre, lien_unique))
-        conn.commit()
+            c.execute("INSERT INTO formulaires (titre, lien_unique) VALUES (?, ?)",
+                      (titre, lien_unique))
 
-        formulaire_id = c.lastrowid
-        conn.close()
+            conn.commit()
+            formulaire_id = c.lastrowid
+            conn.close()
 
-        return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
+            return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
 
-    return render_template("creer_formulaire.html")
+        return render_template("creer_formulaire.html")
+
+    except Exception as e:
+        return f"ERREUR: {str(e)}"
 
 # ================= AJOUT CHAMPS =================
 @app.route("/formulaire/<int:formulaire_id>/champs", methods=["GET", "POST"])
