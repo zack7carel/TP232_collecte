@@ -1,43 +1,37 @@
 import os
-import sqlite3
 import json
 import secrets
-from flask import Flask, render_template, request, redirect, url_for, session, g
+import traceback
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from flask import Flask, render_template, request, redirect, url_for, session
 
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-DB_NAME = "data.db"
-
 # ================= DATABASE =================
 def get_db():
-    if "db" not in g:
-        conn = sqlite3.connect(DB_NAME)
-        conn.row_factory = sqlite3.Row
-        g.db = conn
-    return g.db
+    return psycopg2.connect(
+        os.environ.get("DATABASE_URL"),
+        cursor_factory=RealDictCursor
+    )
 
-@app.teardown_appcontext
-def close_db(error):
-    db = g.pop("db", None)
-    if db:
-        db.close()
-
+# ================= INIT DB =================
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db()
     c = conn.cursor()
 
     c.execute('''
         CREATE TABLE IF NOT EXISTS formulaires (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            titre TEXT,
-            lien_unique TEXT
+            id SERIAL PRIMARY KEY,
+            titre TEXT NOT NULL,
+            lien_unique TEXT UNIQUE NOT NULL
         )
     ''')
 
     c.execute('''
         CREATE TABLE IF NOT EXISTS champs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             formulaire_id INTEGER,
             label TEXT,
             type_champ TEXT,
@@ -49,7 +43,7 @@ def init_db():
 
     c.execute('''
         CREATE TABLE IF NOT EXISTS reponses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             formulaire_id INTEGER,
             donnees TEXT
         )
@@ -69,161 +63,187 @@ def home():
 def menu():
     return render_template("menu.html")
 
-# ================= CREATION =================
+# ================= CREER FORMULAIRE =================
 @app.route("/creer", methods=["GET", "POST"])
 def creer_formulaire():
-    if request.method == "POST":
-        titre = request.form.get("titre")
-        if not titre:
-            return "Titre requis ❌"
+    try:
+        if request.method == "POST":
+            titre = request.form.get("titre")
 
-        lien_unique = secrets.token_urlsafe(8)
+            if not titre:
+                return "Titre requis ❌"
 
-        db = get_db()
-        c = db.cursor()
+            lien_unique = secrets.token_urlsafe(8)
 
-        c.execute(
-            "INSERT INTO formulaires (titre, lien_unique) VALUES (?, ?)",
-            (titre, lien_unique)
-        )
+            conn = get_db()
+            c = conn.cursor()
 
-        db.commit()
-        formulaire_id = c.lastrowid
+            c.execute(
+                "INSERT INTO formulaires (titre, lien_unique) VALUES (%s, %s)",
+                (titre, lien_unique)
+            )
 
-        return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
+            conn.commit()
+            formulaire_id = c.fetchone() if False else None
 
-    return render_template("creer_formulaire.html")
+            c.execute("SELECT id FROM formulaires WHERE lien_unique=%s", (lien_unique,))
+            formulaire_id = c.fetchone()["id"]
+
+            conn.close()
+
+            return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
+
+        return render_template("creer_formulaire.html")
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR CREATE: {e}"
 
 # ================= AJOUT CHAMPS =================
 @app.route("/formulaire/<int:formulaire_id>/champs", methods=["GET", "POST"])
 def ajouter_champs(formulaire_id):
-    db = get_db()
-    c = db.cursor()
+    try:
+        conn = get_db()
+        c = conn.cursor()
 
-    c.execute("SELECT * FROM formulaires WHERE id = ?", (formulaire_id,))
-    formulaire = c.fetchone()
+        c.execute("SELECT * FROM formulaires WHERE id=%s", (formulaire_id,))
+        formulaire = c.fetchone()
 
-    if not formulaire:
-        return "Formulaire introuvable ❌"
+        if not formulaire:
+            return "Formulaire introuvable ❌"
 
-    if request.method == "POST":
-        label = request.form.get("label")
-        type_champ = request.form.get("type_champ")
-        options = request.form.get("options", "")
-        obligatoire = 1 if request.form.get("obligatoire") else 0
+        if request.method == "POST":
+            label = request.form.get("label")
+            type_champ = request.form.get("type_champ")
+            options = request.form.get("options", "")
+            obligatoire = 1 if request.form.get("obligatoire") else 0
 
-        if not label or not type_champ:
-            return "Champ invalide ❌"
+            c.execute(
+                "SELECT COUNT(*) FROM champs WHERE formulaire_id=%s",
+                (formulaire_id,)
+            )
+            ordre = c.fetchone()["count"]
 
-        c.execute("SELECT COUNT(*) FROM champs WHERE formulaire_id = ?", (formulaire_id,))
-        ordre = c.fetchone()[0]
+            c.execute('''
+                INSERT INTO champs (formulaire_id, label, type_champ, options, obligatoire, ordre)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            ''', (formulaire_id, label, type_champ, options, obligatoire, ordre))
 
-        c.execute('''
-            INSERT INTO champs (formulaire_id, label, type_champ, options, obligatoire, ordre)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (formulaire_id, label, type_champ, options, obligatoire, ordre))
+            conn.commit()
 
-        db.commit()
+            if "terminer" in request.form:
+                url = url_for(
+                    "afficher_formulaire",
+                    lien_unique=formulaire["lien_unique"],
+                    _external=True
+                )
 
-        if "terminer" in request.form:
-            lien = formulaire["lien_unique"]
-            url = url_for("afficher_formulaire", lien_unique=lien, _external=True)
+                return f"""
+                <h2>Formulaire créé ✅</h2>
+                <a href="{url}">{url}</a>
+                """
 
-            return f"""
-            <h2>Formulaire créé ✅</h2>
-            <p>Lien :</p>
-            <a href="{url}">{url}</a>
-            """
+            return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
 
-        return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
+        c.execute("SELECT * FROM champs WHERE formulaire_id=%s ORDER BY ordre", (formulaire_id,))
+        champs = c.fetchall()
 
-    c.execute("SELECT * FROM champs WHERE formulaire_id = ? ORDER BY ordre", (formulaire_id,))
-    champs = c.fetchall()
+        return render_template("ajouter_champs.html", formulaire=formulaire, champs=champs, formulaire_id=formulaire_id)
 
-    return render_template("ajouter_champs.html", formulaire=formulaire, champs=champs, formulaire_id=formulaire_id)
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR CHAMPS: {e}"
 
 # ================= FORMULAIRE PUBLIC =================
 @app.route("/f/<lien_unique>")
 def afficher_formulaire(lien_unique):
-    db = get_db()
-    c = db.cursor()
+    conn = get_db()
+    c = conn.cursor()
 
-    c.execute("SELECT * FROM formulaires WHERE lien_unique = ?", (lien_unique,))
+    c.execute("SELECT * FROM formulaires WHERE lien_unique=%s", (lien_unique,))
     formulaire = c.fetchone()
 
     if not formulaire:
         return "Formulaire introuvable ❌", 404
 
-    c.execute("SELECT * FROM champs WHERE formulaire_id = ? ORDER BY ordre", (formulaire["id"],))
+    c.execute("SELECT * FROM champs WHERE formulaire_id=%s ORDER BY ordre", (formulaire["id"],))
     champs = c.fetchall()
+
+    conn.close()
 
     return render_template("form_dynamique.html", formulaire=formulaire, champs=champs)
 
 # ================= SOUMISSION =================
 @app.route("/f/<lien_unique>/submit", methods=["POST"])
 def soumettre(lien_unique):
-    db = get_db()
-    c = db.cursor()
+    try:
+        conn = get_db()
+        c = conn.cursor()
 
-    c.execute("SELECT id FROM formulaires WHERE lien_unique = ?", (lien_unique,))
-    formulaire = c.fetchone()
+        c.execute("SELECT id FROM formulaires WHERE lien_unique=%s", (lien_unique,))
+        formulaire = c.fetchone()
 
-    if not formulaire:
-        return "Formulaire introuvable ❌", 404
+        if not formulaire:
+            return "Formulaire introuvable ❌", 404
 
-    formulaire_id = formulaire["id"]
+        formulaire_id = formulaire["id"]
 
-    c.execute("SELECT id, label, obligatoire FROM champs WHERE formulaire_id = ?", (formulaire_id,))
-    champs = c.fetchall()
+        c.execute("SELECT * FROM champs WHERE formulaire_id=%s", (formulaire_id,))
+        champs = c.fetchall()
 
-    data = {}
+        data = {}
 
-    for champ in champs:
-        value = request.form.get(f"champ_{champ['id']}", "")
+        for champ in champs:
+            value = request.form.get(f"champ_{champ['id']}", "")
 
-        if champ["obligatoire"] == 1 and not value:
-            return f"Champ {champ['label']} obligatoire ❌"
+            if champ["obligatoire"] == 1 and not value:
+                return f"Champ {champ['label']} obligatoire ❌"
 
-        data[str(champ["id"])] = value
+            data[str(champ["id"])] = value
 
-    c.execute(
-        "INSERT INTO reponses (formulaire_id, donnees) VALUES (?, ?)",
-        (formulaire_id, json.dumps(data))
-    )
+        c.execute(
+            "INSERT INTO reponses (formulaire_id, donnees) VALUES (%s, %s)",
+            (formulaire_id, json.dumps(data))
+        )
 
-    db.commit()
+        conn.commit()
+        conn.close()
 
-    return "<h2>✅ Réponse enregistrée</h2>"
+        return "<h2>✅ Réponse enregistrée</h2>"
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR SUBMIT: {e}"
 
 # ================= LISTE =================
 @app.route("/liste")
-def liste_formulaires():
-    db = get_db()
-    c = db.cursor()
+def liste():
+    conn = get_db()
+    c = conn.cursor()
 
     c.execute("SELECT * FROM formulaires ORDER BY id DESC")
     formulaires = c.fetchall()
 
+    conn.close()
+
     return render_template("liste.html", formulaires=formulaires)
 
-# ================= VOIR REPONSES =================
+# ================= REPONSES =================
 @app.route("/admin/formulaire/<int:formulaire_id>/reponses")
-def voir_reponses(formulaire_id):
-    db = get_db()
-    c = db.cursor()
+def reponses(formulaire_id):
+    conn = get_db()
+    c = conn.cursor()
 
-    c.execute("SELECT * FROM formulaires WHERE id = ?", (formulaire_id,))
+    c.execute("SELECT * FROM formulaires WHERE id=%s", (formulaire_id,))
     formulaire = c.fetchone()
 
-    c.execute("SELECT * FROM champs WHERE formulaire_id = ? ORDER BY ordre", (formulaire_id,))
+    c.execute("SELECT * FROM champs WHERE formulaire_id=%s ORDER BY ordre", (formulaire_id,))
     champs = c.fetchall()
 
-    c.execute("SELECT * FROM reponses WHERE formulaire_id = ?", (formulaire_id,))
+    c.execute("SELECT * FROM reponses WHERE formulaire_id=%s", (formulaire_id,))
     reps = c.fetchall()
 
-    reponses = []
-    for r in reps:
-        reponses.append(json.loads(r["donnees"]))
+    reponses = [json.loads(r["donnees"]) for r in reps]
 
     return render_template("reponses.html", formulaire=formulaire, champs=champs, reponses=reponses)
 
