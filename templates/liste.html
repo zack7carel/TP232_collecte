@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Liste des formulaires</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+        }
+
+        .card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        a {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>📋 Liste des formulaires</h1>
+
+{% for f in formulaires %}
+<div class="card">
+    <h3>{{ f["titre"] }}</h3>
+
+    <p>
+        🔗 Lien :
+        <a href="/f/{{ f['lien_unique'] }}" target="_blank">
+            Ouvrir formulaire
+        </a>
+    </p>
+
+    <p>
+        📊 <a href="/admin/formulaire/{{ f['id'] }}/reponses">
+            Voir les réponses
+        </a>
+    </p>
+</div>
+{% endfor %}
+
+<br>
+<a href="/menu">⬅️ Retour menu</a>
+
+</body>
+</html>
