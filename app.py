@@ -255,30 +255,36 @@ def reponses(formulaire_id):
         conn = get_db()
         c = conn.cursor()
 
+        # 🔥 formulaire
         c.execute("SELECT * FROM formulaires WHERE id=%s", (formulaire_id,))
         formulaire = c.fetchone()
 
         if not formulaire:
             return "Formulaire introuvable ❌", 404
 
+        # 🔥 champs
         c.execute(
             "SELECT * FROM champs WHERE formulaire_id=%s ORDER BY ordre",
             (formulaire_id,)
         )
         champs = c.fetchall()
 
+        # 🔥 réponses (SAFE MODE)
         c.execute(
-            "SELECT * FROM reponses WHERE formulaire_id=%s ORDER BY id DESC",
+            "SELECT donnees FROM reponses WHERE formulaire_id=%s ORDER BY id DESC",
             (formulaire_id,)
         )
-        reps = c.fetchall()
+        rows = c.fetchall()
 
         reponses = []
 
-        for r in reps:
+        for row in rows:
             try:
-                reponses.append(json.loads(r["donnees"]) if r["donnees"] else {})
-            except:
+                if row and row["donnees"]:
+                    reponses.append(json.loads(row["donnees"]))
+                else:
+                    reponses.append({})
+            except Exception:
                 reponses.append({})
 
         conn.close()
@@ -291,9 +297,9 @@ def reponses(formulaire_id):
         )
 
     except Exception as e:
+        import traceback
         print(traceback.format_exc())
         return f"ERROR REPONSES: {e}"
-
 # ================= RUN =================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
