@@ -257,6 +257,23 @@ def liste():
     return render_template("liste.html", formulaires=formulaires)
 
 # ================= REPONSES =================
+
+@app.route("/tables")
+def tables():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public'")
+    return str(c.fetchall())
+
+@app.route("/test-db")
+def test_db():
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT 1")
+        return "DB OK ✅"
+    except Exception as e:
+        return f"DB ERROR ❌ {e}"
 @app.route("/admin/formulaire/<int:formulaire_id>/reponses")
 def reponses(formulaire_id):
     try:
