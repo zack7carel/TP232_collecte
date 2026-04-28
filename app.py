@@ -20,41 +20,49 @@ def get_db():
 
 # ================= INIT DB =================
 def init_db():
-    conn = get_db()
-    c = conn.cursor()
+    try:
+        conn = get_db()
+        c = conn.cursor()
 
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS formulaires (
-            id SERIAL PRIMARY KEY,
-            titre TEXT NOT NULL,
-            lien_unique TEXT UNIQUE NOT NULL
-        )
-    """)
+        # 🔥 suppression propre (reset)
+        c.execute("DROP TABLE IF EXISTS reponses")
+        c.execute("DROP TABLE IF EXISTS champs")
+        c.execute("DROP TABLE IF EXISTS formulaires")
 
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS champs (
-            id SERIAL PRIMARY KEY,
-            formulaire_id INTEGER,
-            label TEXT,
-            type_champ TEXT,
-            options TEXT,
-            obligatoire INTEGER,
-            ordre INTEGER
-        )
-    """)
+        # 🔥 recréation propre
+        c.execute("""
+            CREATE TABLE formulaires (
+                id SERIAL PRIMARY KEY,
+                titre TEXT NOT NULL,
+                lien_unique TEXT UNIQUE NOT NULL
+            )
+        """)
 
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS reponses (
-            id SERIAL PRIMARY KEY,
-            formulaire_id INTEGER,
-            donnees TEXT
-        )
-    """)
+        c.execute("""
+            CREATE TABLE champs (
+                id SERIAL PRIMARY KEY,
+                formulaire_id INTEGER,
+                label TEXT,
+                type_champ TEXT,
+                options TEXT,
+                obligatoire INTEGER,
+                ordre INTEGER
+            )
+        """)
 
-    conn.close()
+        c.execute("""
+            CREATE TABLE reponses (
+                id SERIAL PRIMARY KEY,
+                formulaire_id INTEGER,
+                donnees TEXT
+            )
+        """)
 
-init_db()
+        conn.close()
+        print("✅ DATABASE RESET OK")
 
+    except Exception as e:
+        print("❌ DB INIT ERROR:", e)
 # ================= MENU =================
 @app.route("/")
 def home():
