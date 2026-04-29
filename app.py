@@ -24,14 +24,9 @@ def init_db():
         conn = get_db()
         c = conn.cursor()
 
-        # 🔥 suppression propre (reset)
-        c.execute("DROP TABLE IF EXISTS reponses")
-        c.execute("DROP TABLE IF EXISTS champs")
-        c.execute("DROP TABLE IF EXISTS formulaires")
-
-        # 🔥 recréation propre
+        # 🔥 créer tables si elles n'existent pas
         c.execute("""
-            CREATE TABLE formulaires (
+            CREATE TABLE IF NOT EXISTS formulaires (
                 id SERIAL PRIMARY KEY,
                 titre TEXT NOT NULL,
                 lien_unique TEXT UNIQUE NOT NULL
@@ -39,7 +34,7 @@ def init_db():
         """)
 
         c.execute("""
-            CREATE TABLE champs (
+            CREATE TABLE IF NOT EXISTS champs (
                 id SERIAL PRIMARY KEY,
                 formulaire_id INTEGER,
                 label TEXT,
@@ -51,18 +46,20 @@ def init_db():
         """)
 
         c.execute("""
-            CREATE TABLE reponses (
+            CREATE TABLE IF NOT EXISTS reponses (
                 id SERIAL PRIMARY KEY,
                 formulaire_id INTEGER,
                 donnees TEXT
             )
         """)
 
+        conn.commit()
         conn.close()
-        print("✅ DATABASE RESET OK")
+
+        print("✅ TABLES CREÉES")
 
     except Exception as e:
-        print("❌ DB INIT ERROR:", e)
+        print("❌ INIT DB ERROR:", e)
 # ================= MENU =================
 @app.route("/")
 def home():
