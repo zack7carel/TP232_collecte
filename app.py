@@ -279,7 +279,7 @@ def soumettre(lien_unique):
 
         db.commit()
 
-      return "<h2>✅ Réponse enregistrée</h2><br><a href='/'>⬅️ Retour au menu</a>"
+        return "<h2>✅ Réponse enregistrée</h2><br><a href='/'>⬅️ Retour au menu</a>"
 
     except Exception as e:
         print(traceback.format_exc())
