@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Réponses — {{ formulaire['titre'] }}{% endblock %}
+{% block content %}
+
+<a href="/liste" class="back-link">← Mes formulaires</a>
+
+<div class="flex items-center justify-between" style="margin-bottom:0.4rem;">
+    <h1>{{ formulaire['titre'] }}</h1>
+    <a href="/reponses/{{ formulaire['id'] }}/export" class="btn btn-secondary">⬇ Excel</a>
+</div>
+<p class="subtitle">{{ reponses|length }} réponse{{ 's' if reponses|length != 1 }} collectée{{ 's' if reponses|length != 1 }}.</p>
+
+{% if not reponses %}
+<div class="card" style="text-align:center; padding:2.5rem; color:var(--text-muted);">
+    Aucune réponse pour ce formulaire pour l'instant.
+</div>
+{% else %}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                {% for label in labels %}
+                <th>{{ label }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for i, donnees in reponses_parsed %}
+            <tr>
+                <td style="color:var(--text-muted); font-family:'DM Mono',monospace; font-size:0.75rem;">{{ i }}</td>
+                {% for champ_id in champ_ids %}
+                <td>{{ donnees.get(champ_id, '—') }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endblock %}

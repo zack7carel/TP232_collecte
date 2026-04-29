@@ -1,33 +1,21 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Menu</title>
-    <style>
-        body {
-            font-family: Arial;
-            text-align: center;
-            margin-top: 100px;
-        }
+{% extends "base.html" %}
+{% block title %}Accueil — FormCollect{% endblock %}
+{% block content %}
 
-        a {
-            display: block;
-            margin: 20px;
-            padding: 15px;
-            background: blue;
-            color: white;
-            text-decoration: none;
-            width: 250px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-    </style>
-</head>
-<body>
+<h1>FormCollect</h1>
+<p class="subtitle">Créez des formulaires, collectez des réponses.</p>
 
-    <h1>📊 Application de collecte</h1>
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; max-width:520px;">
+    <a href="/creer" class="card" style="text-decoration:none; color:inherit; transition:all 0.2s; cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="font-size:1.5rem; margin-bottom:0.75rem;">✦</div>
+        <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.3rem;">Créer un formulaire</div>
+        <div style="font-size:0.8rem; color:var(--text-muted);">Nouveau formulaire avec champs personnalisés</div>
+    </a>
+    <a href="/liste" class="card" style="text-decoration:none; color:inherit; transition:all 0.2s; cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="font-size:1.5rem; margin-bottom:0.75rem;">▤</div>
+        <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.3rem;">Mes formulaires</div>
+        <div style="font-size:0.8rem; color:var(--text-muted);">Consulter et gérer vos formulaires</div>
+    </a>
+</div>
 
-    <a href="/creer">➕ Créer un formulaire</a>
-    <a href="/liste">📋 Liste des formulaires</a>
-
-</body>
-</html>
+{% endblock %}

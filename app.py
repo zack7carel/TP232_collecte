@@ -29,7 +29,6 @@ def close_db(error):
 def init_db():
     conn = psycopg2.connect(DATABASE_URL)
     c = conn.cursor()
-
     c.execute('''
         CREATE TABLE IF NOT EXISTS formulaires (
             id SERIAL PRIMARY KEY,
@@ -37,7 +36,6 @@ def init_db():
             lien_unique TEXT UNIQUE NOT NULL
         )
     ''')
-
     c.execute('''
         CREATE TABLE IF NOT EXISTS champs (
             id SERIAL PRIMARY KEY,
@@ -49,7 +47,6 @@ def init_db():
             ordre INTEGER
         )
     ''')
-
     c.execute('''
         CREATE TABLE IF NOT EXISTS reponses (
             id SERIAL PRIMARY KEY,
@@ -57,7 +54,6 @@ def init_db():
             donnees TEXT
         )
     ''')
-
     conn.commit()
     conn.close()
 
@@ -66,11 +62,7 @@ init_db()
 # ================= MENU =================
 @app.route("/")
 def menu():
-    return '''
-    <h1>Menu</h1>
-    <a href="/creer">📝 Créer un formulaire</a><br><br>
-    <a href="/liste">📋 Liste des formulaires</a>
-    '''
+    return render_template("menu.html")
 
 # ================= LISTE DES FORMULAIRES =================
 @app.route("/liste")
@@ -80,24 +72,7 @@ def liste_formulaires():
         c = db.cursor()
         c.execute("SELECT * FROM formulaires ORDER BY id DESC")
         formulaires = c.fetchall()
-
-        html = "<h1>Liste des formulaires</h1>"
-        html += "<a href='/'>← Menu</a><br><br>"
-
-        if not formulaires:
-            html += "<p>Aucun formulaire créé pour l'instant.</p>"
-        else:
-            for f in formulaires:
-                lien = url_for("afficher_formulaire", lien_unique=f["lien_unique"], _external=True)
-                html += f"""
-                <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
-                    <strong>{f['titre']}</strong><br>
-                    🔗 <a href="{lien}">{lien}</a><br>
-                    <a href="/reponses/{f['id']}">📊 Voir les réponses</a>
-                </div>
-                """
-        return html
-
+        return render_template("liste.html", formulaires=formulaires)
     except Exception as e:
         print(traceback.format_exc())
         return f"ERROR LISTE: {e}"
@@ -116,35 +91,22 @@ def voir_reponses(formulaire_id):
             return "Formulaire introuvable ❌", 404
 
         c.execute("SELECT * FROM champs WHERE formulaire_id = %s ORDER BY ordre", (formulaire_id,))
-        champs = {str(ch["id"]): ch["label"] for ch in c.fetchall()}
+        champs_list = c.fetchall()
+        champs = {str(ch["id"]): ch["label"] for ch in champs_list}
 
-        c.execute("SELECT * FROM reponses WHERE formulaire_id = %s ORDER BY id DESC", (formulaire_id,))
+        c.execute("SELECT * FROM reponses WHERE formulaire_id = %s ORDER BY id ASC", (formulaire_id,))
         reponses = c.fetchall()
 
-        html = f"<h1>Réponses — {formulaire['titre']}</h1>"
-        html += "<a href='/liste'>← Retour à la liste</a>&nbsp;&nbsp;"
-        html += f"<a href='/reponses/{formulaire_id}/export'>⬇️ Télécharger en Excel</a><br><br>"
+        reponses_parsed = [(i, json.loads(rep["donnees"])) for i, rep in enumerate(reponses, 1)]
 
-        if not reponses:
-            html += "<p>Aucune réponse pour ce formulaire.</p>"
-        else:
-            labels = list(champs.values())
-            html += "<table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse;width:100%'>"
-            html += "<tr style='background:#f0f0f0'>"
-            html += "<th>#</th>"
-            for label in labels:
-                html += f"<th>{label}</th>"
-            html += "</tr>"
-            for i, rep in enumerate(reponses, 1):
-                donnees = json.loads(rep["donnees"])
-                html += "<tr>"
-                html += f"<td>{i}</td>"
-                for champ_id in champs.keys():
-                    html += f"<td>{donnees.get(champ_id, '')}</td>"
-                html += "</tr>"
-            html += "</table>"
-
-        return html
+        return render_template(
+            "reponses.html",
+            formulaire=formulaire,
+            reponses=reponses,
+            reponses_parsed=reponses_parsed,
+            labels=list(champs.values()),
+            champ_ids=list(champs.keys())
+        )
 
     except Exception as e:
         print(traceback.format_exc())
@@ -172,7 +134,6 @@ def exporter_excel(formulaire_id):
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Réponses"
-
         ws.append(["#"] + list(champs.values()))
 
         for i, rep in enumerate(reponses, 1):
@@ -198,25 +159,21 @@ def creer_formulaire():
     try:
         if request.method == "POST":
             titre = request.form.get("titre")
-
             if not titre:
                 return "Titre requis ❌"
 
             lien_unique = secrets.token_urlsafe(8)
-
             db = get_db()
             c = db.cursor()
-
             c.execute(
                 "INSERT INTO formulaires (titre, lien_unique) VALUES (%s, %s) RETURNING id",
                 (titre, lien_unique)
             )
             formulaire_id = c.fetchone()["id"]
             db.commit()
-
             return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
 
-        return render_template("creer_formulaire.html", action="/creer")
+        return render_template("creer_formulaire.html")
 
     except Exception as e:
         print(traceback.format_exc())
@@ -257,10 +214,7 @@ def ajouter_champs(formulaire_id):
             if "terminer" in request.form:
                 lien = formulaire["lien_unique"]
                 url = url_for("afficher_formulaire", lien_unique=lien, _external=True)
-                return f"""
-                <h2>Formulaire créé ✅</h2>
-                <a href="{url}">{url}</a>
-                """
+                return render_template("formulaire_cree.html", url=url)
 
             return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
 
@@ -314,58 +268,24 @@ def soumettre(lien_unique):
         champs = c.fetchall()
 
         donnees = {}
-
         for champ in champs:
             champ_id = champ["id"]
             valeur = request.form.get(f"champ_{champ_id}", "")
-
             if champ["obligatoire"] == 1 and not valeur:
                 return f"Champ '{champ['label']}' obligatoire ❌"
-
             donnees[str(champ_id)] = valeur
 
         c.execute(
             "INSERT INTO reponses (formulaire_id, donnees) VALUES (%s, %s)",
             (formulaire_id, json.dumps(donnees))
         )
-
         db.commit()
 
-        return "<h2>✅ Réponse enregistrée</h2><br><a href='/'>⬅️ Retour au menu</a>"
+        return render_template("merci.html")
 
     except Exception as e:
         print(traceback.format_exc())
         return f"ERROR SUBMIT: {e}"
-
-# ================= ADMIN =================
-@app.route("/admin")
-def admin():
-    if not session.get("logged_in"):
-        return redirect(url_for("login"))
-
-    db = get_db()
-    c = db.cursor()
-
-    c.execute("SELECT * FROM formulaires")
-    formulaires = c.fetchall()
-
-    return render_template("admin_dashboard.html", formulaires=formulaires)
-
-# ================= LOGIN =================
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        if request.form["username"] == "admin" and request.form["password"] == "1234":
-            session["logged_in"] = True
-            return redirect(url_for("admin"))
-        return "Erreur login ❌"
-
-    return render_template("login.html")
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login"))
 
 # ================= RUN =================
 if __name__ == "__main__":

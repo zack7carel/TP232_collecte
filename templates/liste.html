@@ -1,49 +1,31 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Liste des formulaires</title>
-    <style>
-        body {
-            font-family: Arial;
-            margin: 40px;
-        }
+{% extends "base.html" %}
+{% block title %}Mes formulaires — FormCollect{% endblock %}
+{% block content %}
 
-        .card {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
+<h1>Mes formulaires</h1>
+<p class="subtitle">{{ formulaires|length }} formulaire{{ 's' if formulaires|length != 1 }} créé{{ 's' if formulaires|length != 1 }}.</p>
 
-        a {
-            margin-right: 10px;
-        }
-    </style>
-</head>
-<body>
-
-<h1>📋 Liste des formulaires</h1>
-
-{% for f in formulaires %}
-<div class="card">
-    <h3>{{ f["titre"] }}</h3>
-
-    <p>
-        🔗 Lien :
-        <a href="/f/{{ f['lien_unique'] }}" target="_blank">
-            Ouvrir formulaire
-        </a>
-    </p>
-
-    <p>
-        📊 <a href="/admin/formulaire/{{ f['id'] }}/reponses">
-            Voir les réponses
-        </a>
-    </p>
+{% if not formulaires %}
+<div class="card" style="max-width:480px; text-align:center; padding:2.5rem;">
+    <div style="font-size:2rem; margin-bottom:0.75rem;">▤</div>
+    <div style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.25rem;">Aucun formulaire pour l'instant.</div>
+    <a href="/creer" class="btn btn-primary">Créer mon premier formulaire</a>
 </div>
-{% endfor %}
+{% else %}
+<div style="display:flex; flex-direction:column; gap:0.75rem;">
+    {% for f in formulaires %}
+    <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding:1.1rem 1.5rem;">
+        <div>
+            <div style="font-weight:600; font-size:0.95rem;">{{ f['titre'] }}</div>
+            <div class="mono mt-1">{{ f['lien_unique'] }}</div>
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-shrink:0; margin-left:1rem;">
+            <a href="/f/{{ f['lien_unique'] }}" target="_blank" class="btn btn-secondary">🔗 Lien</a>
+            <a href="/reponses/{{ f['id'] }}" class="btn btn-primary">Réponses</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
-<br>
-<a href="/menu">⬅️ Retour menu</a>
-
-</body>
-</html>
+{% endblock %}

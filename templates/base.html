@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FormCollect{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #f7f7f5;
+            --surface: #ffffff;
+            --border: #e8e8e4;
+            --text: #1a1a18;
+            --text-muted: #8a8a82;
+            --accent: #1a1a18;
+            --accent-hover: #3a3a38;
+            --danger: #c0392b;
+            --success: #27ae60;
+            --radius: 10px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* NAV */
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 400;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            transition: all 0.15s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        /* MAIN */
+        main {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* TYPOGRAPHY */
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.4rem;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 2.5rem;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            margin-bottom: 1rem;
+        }
+
+        /* CARD */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            box-shadow: var(--shadow);
+        }
+
+        /* FORM ELEMENTS */
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="email"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 0.925rem;
+            color: var(--text);
+            background: var(--bg);
+            transition: border-color 0.15s, box-shadow 0.15s;
+            outline: none;
+            margin-bottom: 1.25rem;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--text);
+            box-shadow: 0 0 0 3px rgba(26,26,24,0.06);
+            background: var(--surface);
+        }
+
+        /* BUTTONS */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.6rem 1.25rem;
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg);
+            border-color: #ccc;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-muted);
+            padding: 0.4rem 0.75rem;
+        }
+
+        .btn-ghost:hover {
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        /* BACK LINK */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin-bottom: 1.75rem;
+            transition: color 0.15s;
+        }
+
+        .back-link:hover { color: var(--text); }
+
+        /* BADGE */
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-family: 'DM Mono', monospace;
+        }
+
+        /* ALERT */
+        .alert {
+            padding: 0.85rem 1rem;
+            border-radius: 7px;
+            font-size: 0.875rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .alert-success {
+            background: #f0faf4;
+            border: 1px solid #b7e4c7;
+            color: #1a6b3a;
+        }
+
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        /* TABLE */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        thead th {
+            background: var(--bg);
+            padding: 0.7rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.1s;
+        }
+
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: #fafaf8; }
+
+        tbody td {
+            padding: 0.75rem 1rem;
+            color: var(--text);
+        }
+
+        /* CHECKBOX */
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1.25rem;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .checkbox-row label {
+            margin: 0;
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: 0.875rem;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        /* DIVIDER */
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 1.5rem 0;
+        }
+
+        /* MONO */
+        .mono {
+            font-family: 'DM Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* FLEX UTILS */
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-3 { gap: 0.75rem; }
+        .mt-1 { margin-top: 0.25rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .mt-3 { margin-top: 0.75rem; }
+        .mb-0 { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="nav-logo">FormCollect</a>
+        <div class="nav-links">
+            <a href="/creer">Nouveau</a>
+            <a href="/liste">Formulaires</a>
+        </div>
+    </nav>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

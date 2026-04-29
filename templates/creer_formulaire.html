@@ -1,15 +1,20 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Créer un formulaire</title>
-</head>
-<body>
-    <h1>➕ Nouveau formulaire</h1>
+{% extends "base.html" %}
+{% block title %}Nouveau formulaire — FormCollect{% endblock %}
+{% block content %}
+
+<a href="/" class="back-link">← Accueil</a>
+
+<h1>Nouveau formulaire</h1>
+<p class="subtitle">Donnez un titre à votre formulaire pour commencer.</p>
+
+<div class="card" style="max-width:480px;">
     <form method="POST">
-        <label>Titre du formulaire :</label>
-        <input type="text" name="titre" required>
-        <button type="submit">Créer et ajouter des champs</button>
+        <label for="titre">Titre du formulaire</label>
+        <input type="text" id="titre" name="titre" placeholder="Ex : Inscription atelier, Sondage satisfaction…" required autofocus>
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">
+            Créer et ajouter des champs →
+        </button>
     </form>
-    <a href="/">⬅️ Retour</a>
-</body>
-</html>
+</div>
+
+{% endblock %}

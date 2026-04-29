@@ -1,66 +1,49 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ formulaire["titre"] }}</title>
-    <style>
-        body { 
-            font-family: Arial; 
-            max-width: 600px; 
-            margin: 40px auto; 
-        }
+{% extends "base.html" %}
+{% block title %}{{ formulaire['titre'] }}{% endblock %}
+{% block content %}
 
-        input, select, textarea { 
-            width: 100%; 
-            margin: 10px 0; 
-            padding: 8px; 
-        }
+<div style="max-width:560px; margin:0 auto;">
+    <h1>{{ formulaire['titre'] }}</h1>
+    <p class="subtitle">Remplissez le formulaire ci-dessous.</p>
 
-        button { 
-            background: blue; 
-            color: white; 
-            padding: 10px 20px; 
-            border: none; 
-            cursor: pointer; 
-        }
-    </style>
-</head>
+    <div class="card">
+        <form method="POST" action="/f/{{ formulaire['lien_unique'] }}/submit">
+            {% for champ in champs %}
+            <div style="margin-bottom:1.25rem;">
+                <label for="champ_{{ champ['id'] }}">
+                    {{ champ['label'] }}
+                    {% if champ['obligatoire'] %}<span style="color:#c0392b;">*</span>{% endif %}
+                </label>
 
-<body>
+                {% if champ['type_champ'] == 'textarea' %}
+                    <textarea id="champ_{{ champ['id'] }}" name="champ_{{ champ['id'] }}" rows="4"
+                        {% if champ['obligatoire'] %}required{% endif %}
+                        style="margin-bottom:0; resize:vertical;"></textarea>
 
-    <h1>{{ formulaire["titre"] }}</h1>
-    
-    <!-- 🔥 CORRECTION ICI -->
-    <form method="POST" action="{{ url_for('soumettre', lien_unique=formulaire['lien_unique']) }}">
-        
-        {% for champ in champs %}
-        <div>
-            <label>
-                {{ champ["label"] }}
-                {% if champ["obligatoire"] == 1 %} *{% endif %}
-            </label>
-            
-            {% if champ["type_champ"] == 'textarea' %}
-                <textarea name="champ_{{ champ['id'] }}" {% if champ["obligatoire"] == 1 %}required{% endif %}></textarea>
-                
-            {% elif champ["type_champ"] == 'select' %}
-                <select name="champ_{{ champ['id'] }}" {% if champ["obligatoire"] == 1 %}required{% endif %}>
-                    {% for option in champ["options"].split(',') %}
-                        <option value="{{ option.strip() }}">{{ option.strip() }}</option>
-                    {% endfor %}
-                </select>
-                
-            {% else %}
-                <input 
-                    type="{{ champ['type_champ'] }}" 
-                    name="champ_{{ champ['id'] }}" 
-                    {% if champ["obligatoire"] == 1 %}required{% endif %}
-                >
-            {% endif %}
-        </div>
-        {% endfor %}
-        
-        <button type="submit">Envoyer ✅</button>
-    </form>
+                {% elif champ['type_champ'] == 'select' %}
+                    <select id="champ_{{ champ['id'] }}" name="champ_{{ champ['id'] }}"
+                        {% if champ['obligatoire'] %}required{% endif %}
+                        style="margin-bottom:0;">
+                        <option value="">Choisir…</option>
+                        {% for opt in champ['options'].split(',') %}
+                            <option value="{{ opt.strip() }}">{{ opt.strip() }}</option>
+                        {% endfor %}
+                    </select>
 
-</body>
-</html>
+                {% else %}
+                    <input type="{{ champ['type_champ'] }}" id="champ_{{ champ['id'] }}" name="champ_{{ champ['id'] }}"
+                        {% if champ['obligatoire'] %}required{% endif %}
+                        style="margin-bottom:0;">
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <hr>
+            <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:0.5rem;">
+                Envoyer la réponse →
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

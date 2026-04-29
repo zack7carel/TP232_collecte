@@ -1,84 +1,69 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Ajouter des champs</title>
-    <style>
-        body {
-            font-family: Arial;
-            margin: 30px;
-        }
+{% extends "base.html" %}
+{% block title %}Champs — {{ formulaire['titre'] }}{% endblock %}
+{% block content %}
 
-        .champ {
-            border: 1px solid #ddd;
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 8px;
-        }
+<a href="/" class="back-link">← Accueil</a>
 
-        input, select {
-            margin: 5px 0;
-            padding: 5px;
-        }
+<div class="flex items-center justify-between" style="margin-bottom:0.4rem;">
+    <h1>{{ formulaire['titre'] }}</h1>
+</div>
+<p class="subtitle">Ajoutez les champs de votre formulaire.</p>
 
-        button {
-            padding: 8px 12px;
-            margin: 5px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:start;">
 
-    <!-- 🔥 CORRECTION ICI -->
-    <h1>Formulaire : {{ formulaire["titre"] }}</h1>
-    
-    <h2>➕ Ajouter un champ</h2>
+    <!-- FORMULAIRE AJOUT CHAMP -->
+    <div class="card">
+        <h2>Ajouter un champ</h2>
+        <form method="POST">
+            <label for="label">Libellé</label>
+            <input type="text" id="label" name="label" placeholder="Ex : Nom complet, Email…" required>
 
-    <form method="POST">
+            <label for="type_champ">Type de champ</label>
+            <select id="type_champ" name="type_champ">
+                <option value="text">Texte court</option>
+                <option value="textarea">Texte long</option>
+                <option value="email">Email</option>
+                <option value="number">Nombre</option>
+                <option value="date">Date</option>
+                <option value="select">Liste déroulante</option>
+            </select>
 
-        <label>Label :</label><br>
-        <input type="text" name="label" required><br>
+            <label for="options">Options <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.8rem;">(si liste déroulante, séparées par des virgules)</span></label>
+            <input type="text" id="options" name="options" placeholder="Option A, Option B, Option C">
 
-        <label>Type :</label><br>
-        <select name="type_champ">
-            <option value="text">Texte court</option>
-            <option value="email">Email</option>
-            <option value="number">Nombre</option>
-            <option value="textarea">Texte long</option>
-            <option value="select">Liste déroulante</option>
-        </select><br>
+            <div class="checkbox-row">
+                <input type="checkbox" id="obligatoire" name="obligatoire">
+                <label for="obligatoire">Champ obligatoire</label>
+            </div>
 
-        <label>Options (si liste déroulante) :</label><br>
-        <input type="text" name="options" placeholder="ex: Oui,Non,Peut-être"><br>
-
-        <label>
-            <input type="checkbox" name="obligatoire"> Champ obligatoire
-        </label><br><br>
-
-        <!-- 🔥 CORRECTION ICI -->
-        <button type="submit" name="ajouter_autre">➕ Ajouter un autre champ</button>
-        <button type="submit" name="terminer">✅ Terminer</button>
-
-    </form>
-
-    <h2>📋 Champs existants</h2>
-
-    {% for champ in champs %}
-    <div class="champ">
-        <strong>{{ champ["label"] }}</strong> ({{ champ["type_champ"] }}) 
-        
-        {% if champ["obligatoire"] == 1 %}
-            ⚠️ obligatoire
-        {% endif %}
-
-        <a href="/admin/formulaire/{{ formulaire_id }}/supprimer_champ/{{ champ['id'] }}">
-            🗑️ Supprimer
-        </a>
+            <div style="display:flex; gap:0.5rem;">
+                <button type="submit" name="ajouter" class="btn btn-secondary" style="flex:1; justify-content:center;">+ Ajouter</button>
+                <button type="submit" name="terminer" class="btn btn-primary" style="flex:1; justify-content:center;">Terminer ✓</button>
+            </div>
+        </form>
     </div>
-    {% endfor %}
 
-    <br>
-    <a href="/admin">⬅️ Retour admin</a>
+    <!-- LISTE DES CHAMPS -->
+    <div>
+        <h2>Champs ajoutés <span class="badge">{{ champs|length }}</span></h2>
+        {% if champs %}
+            {% for champ in champs %}
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.85rem 1rem; margin-bottom:0.5rem; display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                    <div style="font-size:0.9rem; font-weight:500;">{{ champ['label'] }}</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.1rem;">
+                        {{ champ['type_champ'] }}
+                        {% if champ['obligatoire'] %}<span style="color:#c0392b;"> · obligatoire</span>{% endif %}
+                    </div>
+                </div>
+                <span style="font-size:1rem; color:var(--text-muted);">≡</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="color:var(--text-muted); font-size:0.875rem; padding:1rem 0;">Aucun champ ajouté pour l'instant.</div>
+        {% endif %}
+    </div>
 
-</body>
-</html>
+</div>
+
+{% endblock %}
