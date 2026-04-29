@@ -61,8 +61,87 @@ def init_db():
 
 init_db()
 
+# ================= MENU =================
+@app.route("/")
+def menu():
+    return '''
+    <h1>Menu</h1>
+    <a href="/creer">📝 Créer un formulaire</a><br><br>
+    <a href="/liste">📋 Liste des formulaires</a>
+    '''
+
+# ================= LISTE DES FORMULAIRES =================
+@app.route("/liste")
+def liste_formulaires():
+    try:
+        db = get_db()
+        c = db.cursor()
+        c.execute("SELECT * FROM formulaires ORDER BY id DESC")
+        formulaires = c.fetchall()
+
+        html = "<h1>Liste des formulaires</h1>"
+        html += "<a href='/'>← Menu</a><br><br>"
+
+        if not formulaires:
+            html += "<p>Aucun formulaire créé pour l'instant.</p>"
+        else:
+            for f in formulaires:
+                lien = url_for("afficher_formulaire", lien_unique=f["lien_unique"], _external=True)
+                html += f"""
+                <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+                    <strong>{f['titre']}</strong><br>
+                    🔗 <a href="{lien}">{lien}</a><br>
+                    <a href="/reponses/{f['id']}">📊 Voir les réponses</a>
+                </div>
+                """
+        return html
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR LISTE: {e}"
+
+# ================= REPONSES D'UN FORMULAIRE =================
+@app.route("/reponses/<int:formulaire_id>")
+def voir_reponses(formulaire_id):
+    try:
+        db = get_db()
+        c = db.cursor()
+
+        c.execute("SELECT * FROM formulaires WHERE id = %s", (formulaire_id,))
+        formulaire = c.fetchone()
+
+        if not formulaire:
+            return "Formulaire introuvable ❌", 404
+
+        c.execute("SELECT * FROM champs WHERE formulaire_id = %s ORDER BY ordre", (formulaire_id,))
+        champs = {str(ch["id"]): ch["label"] for ch in c.fetchall()}
+
+        c.execute("SELECT * FROM reponses WHERE formulaire_id = %s ORDER BY id DESC", (formulaire_id,))
+        reponses = c.fetchall()
+
+        html = f"<h1>Réponses — {formulaire['titre']}</h1>"
+        html += "<a href='/liste'>← Retour à la liste</a><br><br>"
+
+        if not reponses:
+            html += "<p>Aucune réponse pour ce formulaire.</p>"
+        else:
+            for i, rep in enumerate(reponses, 1):
+                donnees = json.loads(rep["donnees"])
+                html += f"<div style='border:1px solid #ccc; padding:10px; margin-bottom:10px;'>"
+                html += f"<strong>Réponse #{i}</strong><br>"
+                for champ_id, valeur in donnees.items():
+                    label = champs.get(champ_id, f"Champ {champ_id}")
+                    html += f"<b>{label} :</b> {valeur}<br>"
+                html += "</div>"
+
+        return html
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR REPONSES: {e}"
+
 # ================= CREATION FORMULAIRE =================
-@app.route("/", methods=["GET", "POST"])
+@app.route("/creer", methods=["GET", "POST"])
 def creer_formulaire():
     try:
         if request.method == "POST":
@@ -85,7 +164,7 @@ def creer_formulaire():
 
             return redirect(url_for("ajouter_champs", formulaire_id=formulaire_id))
 
-        return render_template("creer_formulaire.html")
+        return render_template("creer_formulaire.html", action="/creer")
 
     except Exception as e:
         print(traceback.format_exc())
