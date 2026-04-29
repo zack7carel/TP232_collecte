@@ -4,7 +4,9 @@ import secrets
 import traceback
 import psycopg2
 import psycopg2.extras
-from flask import Flask, render_template, request, redirect, url_for, session, g
+import openpyxl
+from io import BytesIO
+from flask import Flask, render_template, request, redirect, url_for, session, g, send_file
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
@@ -120,7 +122,8 @@ def voir_reponses(formulaire_id):
         reponses = c.fetchall()
 
         html = f"<h1>Réponses — {formulaire['titre']}</h1>"
-        html += "<a href='/liste'>← Retour à la liste</a><br><br>"
+        html += "<a href='/liste'>← Retour à la liste</a>&nbsp;&nbsp;"
+        html += f"<a href='/reponses/{formulaire_id}/export'>⬇️ Télécharger en Excel</a><br><br>"
 
         if not reponses:
             html += "<p>Aucune réponse pour ce formulaire.</p>"
@@ -146,6 +149,48 @@ def voir_reponses(formulaire_id):
     except Exception as e:
         print(traceback.format_exc())
         return f"ERROR REPONSES: {e}"
+
+# ================= EXPORT EXCEL =================
+@app.route("/reponses/<int:formulaire_id>/export")
+def exporter_excel(formulaire_id):
+    try:
+        db = get_db()
+        c = db.cursor()
+
+        c.execute("SELECT * FROM formulaires WHERE id = %s", (formulaire_id,))
+        formulaire = c.fetchone()
+
+        if not formulaire:
+            return "Formulaire introuvable ❌", 404
+
+        c.execute("SELECT * FROM champs WHERE formulaire_id = %s ORDER BY ordre", (formulaire_id,))
+        champs = {str(ch["id"]): ch["label"] for ch in c.fetchall()}
+
+        c.execute("SELECT * FROM reponses WHERE formulaire_id = %s ORDER BY id ASC", (formulaire_id,))
+        reponses = c.fetchall()
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Réponses"
+
+        ws.append(["#"] + list(champs.values()))
+
+        for i, rep in enumerate(reponses, 1):
+            donnees = json.loads(rep["donnees"])
+            ligne = [i] + [donnees.get(champ_id, "") for champ_id in champs.keys()]
+            ws.append(ligne)
+
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        nom_fichier = f"reponses_{formulaire['titre']}.xlsx"
+        return send_file(output, as_attachment=True, download_name=nom_fichier,
+                         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR EXPORT: {e}"
 
 # ================= CREATION FORMULAIRE =================
 @app.route("/creer", methods=["GET", "POST"])
@@ -286,7 +331,7 @@ def soumettre(lien_unique):
 
         db.commit()
 
-        return "<h2>✅ Réponse enregistrée</h2>"
+        return "<h2>✅ Réponse enregistrée</h2><br><a href='/'>⬅️ Retour au menu</a>"
 
     except Exception as e:
         print(traceback.format_exc())
