@@ -125,14 +125,21 @@ def voir_reponses(formulaire_id):
         if not reponses:
             html += "<p>Aucune réponse pour ce formulaire.</p>"
         else:
+            labels = list(champs.values())
+            html += "<table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse;width:100%'>"
+            html += "<tr style='background:#f0f0f0'>"
+            html += "<th>#</th>"
+            for label in labels:
+                html += f"<th>{label}</th>"
+            html += "</tr>"
             for i, rep in enumerate(reponses, 1):
                 donnees = json.loads(rep["donnees"])
-                html += f"<div style='border:1px solid #ccc; padding:10px; margin-bottom:10px;'>"
-                html += f"<strong>Réponse #{i}</strong><br>"
-                for champ_id, valeur in donnees.items():
-                    label = champs.get(champ_id, f"Champ {champ_id}")
-                    html += f"<b>{label} :</b> {valeur}<br>"
-                html += "</div>"
+                html += "<tr>"
+                html += f"<td>{i}</td>"
+                for champ_id in champs.keys():
+                    html += f"<td>{donnees.get(champ_id, '')}</td>"
+                html += "</tr>"
+            html += "</table>"
 
         return html
 
@@ -279,7 +286,7 @@ def soumettre(lien_unique):
 
         db.commit()
 
-        return "<h2>✅ Réponse enregistrée</h2><br><a href='/'>⬅️ Retour au menu</a>"
+        return "<h2>✅ Réponse enregistrée</h2>"
 
     except Exception as e:
         print(traceback.format_exc())
