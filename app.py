@@ -7,6 +7,7 @@ import psycopg2.extras
 import openpyxl
 from io import BytesIO
 from flask import Flask, render_template, request, redirect, url_for, session, g, send_file
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
@@ -29,13 +30,25 @@ def close_db(error):
 def init_db():
     conn = psycopg2.connect(DATABASE_URL)
     c = conn.cursor()
+
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS utilisateurs (
+            id SERIAL PRIMARY KEY,
+            nom TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            mot_de_passe TEXT NOT NULL
+        )
+    ''')
+
     c.execute('''
         CREATE TABLE IF NOT EXISTS formulaires (
             id SERIAL PRIMARY KEY,
+            utilisateur_id INTEGER REFERENCES utilisateurs(id),
             titre TEXT NOT NULL,
             lien_unique TEXT UNIQUE NOT NULL
         )
     ''')
+
     c.execute('''
         CREATE TABLE IF NOT EXISTS champs (
             id SERIAL PRIMARY KEY,
@@ -47,6 +60,7 @@ def init_db():
             ordre INTEGER
         )
     ''')
+
     c.execute('''
         CREATE TABLE IF NOT EXISTS reponses (
             id SERIAL PRIMARY KEY,
@@ -54,23 +68,116 @@ def init_db():
             donnees TEXT
         )
     ''')
+
     conn.commit()
     conn.close()
 
 init_db()
 
+# ================= HELPERS =================
+def utilisateur_connecte():
+    return session.get("utilisateur_id")
+
+def login_requis(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not utilisateur_connecte():
+            return redirect(url_for("connexion"))
+        return f(*args, **kwargs)
+    return decorated
+
+# ================= INSCRIPTION =================
+@app.route("/inscription", methods=["GET", "POST"])
+def inscription():
+    try:
+        if utilisateur_connecte():
+            return redirect(url_for("menu"))
+
+        erreur = None
+        if request.method == "POST":
+            nom = request.form.get("nom", "").strip()
+            email = request.form.get("email", "").strip().lower()
+            mdp = request.form.get("mot_de_passe", "")
+
+            if not nom or not email or not mdp:
+                erreur = "Tous les champs sont obligatoires."
+            elif len(mdp) < 6:
+                erreur = "Le mot de passe doit contenir au moins 6 caractères."
+            else:
+                db = get_db()
+                c = db.cursor()
+                c.execute("SELECT id FROM utilisateurs WHERE email = %s", (email,))
+                if c.fetchone():
+                    erreur = "Un compte existe déjà avec cet email."
+                else:
+                    mdp_hash = generate_password_hash(mdp)
+                    c.execute(
+                        "INSERT INTO utilisateurs (nom, email, mot_de_passe) VALUES (%s, %s, %s) RETURNING id",
+                        (nom, email, mdp_hash)
+                    )
+                    utilisateur_id = c.fetchone()["id"]
+                    db.commit()
+                    session["utilisateur_id"] = utilisateur_id
+                    session["utilisateur_nom"] = nom
+                    return redirect(url_for("menu"))
+
+        return render_template("inscription.html", erreur=erreur)
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR INSCRIPTION: {e}"
+
+# ================= CONNEXION =================
+@app.route("/connexion", methods=["GET", "POST"])
+def connexion():
+    try:
+        if utilisateur_connecte():
+            return redirect(url_for("menu"))
+
+        erreur = None
+        if request.method == "POST":
+            email = request.form.get("email", "").strip().lower()
+            mdp = request.form.get("mot_de_passe", "")
+
+            db = get_db()
+            c = db.cursor()
+            c.execute("SELECT * FROM utilisateurs WHERE email = %s", (email,))
+            utilisateur = c.fetchone()
+
+            if not utilisateur or not check_password_hash(utilisateur["mot_de_passe"], mdp):
+                erreur = "Email ou mot de passe incorrect."
+            else:
+                session["utilisateur_id"] = utilisateur["id"]
+                session["utilisateur_nom"] = utilisateur["nom"]
+                return redirect(url_for("menu"))
+
+        return render_template("connexion.html", erreur=erreur)
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR CONNEXION: {e}"
+
+# ================= DECONNEXION =================
+@app.route("/deconnexion")
+def deconnexion():
+    session.clear()
+    return redirect(url_for("connexion"))
+
 # ================= MENU =================
 @app.route("/")
+@login_requis
 def menu():
-    return render_template("menu.html")
+    return render_template("menu.html", nom=session.get("utilisateur_nom"))
 
 # ================= LISTE DES FORMULAIRES =================
 @app.route("/liste")
+@login_requis
 def liste_formulaires():
     try:
         db = get_db()
         c = db.cursor()
-        c.execute("SELECT * FROM formulaires ORDER BY id DESC")
+        c.execute("SELECT * FROM formulaires WHERE utilisateur_id = %s ORDER BY id DESC", (utilisateur_connecte(),))
         formulaires = c.fetchall()
         return render_template("liste.html", formulaires=formulaires)
     except Exception as e:
@@ -79,12 +186,13 @@ def liste_formulaires():
 
 # ================= REPONSES D'UN FORMULAIRE =================
 @app.route("/reponses/<int:formulaire_id>")
+@login_requis
 def voir_reponses(formulaire_id):
     try:
         db = get_db()
         c = db.cursor()
 
-        c.execute("SELECT * FROM formulaires WHERE id = %s", (formulaire_id,))
+        c.execute("SELECT * FROM formulaires WHERE id = %s AND utilisateur_id = %s", (formulaire_id, utilisateur_connecte()))
         formulaire = c.fetchone()
 
         if not formulaire:
@@ -114,12 +222,13 @@ def voir_reponses(formulaire_id):
 
 # ================= EXPORT EXCEL =================
 @app.route("/reponses/<int:formulaire_id>/export")
+@login_requis
 def exporter_excel(formulaire_id):
     try:
         db = get_db()
         c = db.cursor()
 
-        c.execute("SELECT * FROM formulaires WHERE id = %s", (formulaire_id,))
+        c.execute("SELECT * FROM formulaires WHERE id = %s AND utilisateur_id = %s", (formulaire_id, utilisateur_connecte()))
         formulaire = c.fetchone()
 
         if not formulaire:
@@ -155,6 +264,7 @@ def exporter_excel(formulaire_id):
 
 # ================= CREATION FORMULAIRE =================
 @app.route("/creer", methods=["GET", "POST"])
+@login_requis
 def creer_formulaire():
     try:
         if request.method == "POST":
@@ -166,8 +276,8 @@ def creer_formulaire():
             db = get_db()
             c = db.cursor()
             c.execute(
-                "INSERT INTO formulaires (titre, lien_unique) VALUES (%s, %s) RETURNING id",
-                (titre, lien_unique)
+                "INSERT INTO formulaires (utilisateur_id, titre, lien_unique) VALUES (%s, %s, %s) RETURNING id",
+                (utilisateur_connecte(), titre, lien_unique)
             )
             formulaire_id = c.fetchone()["id"]
             db.commit()
@@ -181,12 +291,13 @@ def creer_formulaire():
 
 # ================= AJOUT CHAMPS =================
 @app.route("/formulaire/<int:formulaire_id>/champs", methods=["GET", "POST"])
+@login_requis
 def ajouter_champs(formulaire_id):
     try:
         db = get_db()
         c = db.cursor()
 
-        c.execute("SELECT * FROM formulaires WHERE id = %s", (formulaire_id,))
+        c.execute("SELECT * FROM formulaires WHERE id = %s AND utilisateur_id = %s", (formulaire_id, utilisateur_connecte()))
         formulaire = c.fetchone()
 
         if formulaire is None:
@@ -286,13 +397,17 @@ def soumettre(lien_unique):
     except Exception as e:
         print(traceback.format_exc())
         return f"ERROR SUBMIT: {e}"
-        
+
 # ================= SUPPRESSION FORMULAIRE =================
 @app.route("/formulaire/<int:formulaire_id>/supprimer", methods=["POST"])
+@login_requis
 def supprimer_formulaire(formulaire_id):
     try:
         db = get_db()
         c = db.cursor()
+        c.execute("SELECT id FROM formulaires WHERE id = %s AND utilisateur_id = %s", (formulaire_id, utilisateur_connecte()))
+        if not c.fetchone():
+            return "Non autorisé ❌", 403
         c.execute("DELETE FROM reponses WHERE formulaire_id = %s", (formulaire_id,))
         c.execute("DELETE FROM champs WHERE formulaire_id = %s", (formulaire_id,))
         c.execute("DELETE FROM formulaires WHERE id = %s", (formulaire_id,))

@@ -9,16 +9,16 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --bg: #f0f4f8;
+            --bg: #f4f1ee;
             --surface: #ffffff;
-            --border: #dce4ed;
-            --text: #1b2a3b;
-            --text-muted: #7a90a4;
-            --accent: #2c6fad;
-            --accent-hover: #1f5490;
-            --accent-light: #e8f1fa;
+            --border: #e2dbd5;
+            --text: #2a1f30;
+            --text-muted: #9a8fa3;
+            --accent: #5c3d6e;
+            --accent-hover: #4a2f5a;
+            --accent-light: #f0eaf5;
             --radius: 10px;
-            --shadow: 0 1px 3px rgba(44,111,173,0.07), 0 4px 16px rgba(44,111,173,0.06);
+            --shadow: 0 1px 3px rgba(92,61,110,0.07), 0 4px 16px rgba(92,61,110,0.06);
         }
 
         body {
@@ -32,7 +32,6 @@
         /* NAV */
         nav {
             background: var(--accent);
-            border-bottom: none;
             padding: 0 2rem;
             display: flex;
             align-items: center;
@@ -41,7 +40,7 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 2px 12px rgba(44,111,173,0.18);
+            box-shadow: 0 2px 12px rgba(92,61,110,0.2);
         }
 
         .nav-logo {
@@ -58,7 +57,7 @@
         }
 
         .nav-links a {
-            color: rgba(255,255,255,0.75);
+            color: rgba(255,255,255,0.7);
             text-decoration: none;
             font-size: 0.875rem;
             font-weight: 400;
@@ -150,7 +149,7 @@
 
         input:focus, select:focus, textarea:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(44,111,173,0.1);
+            box-shadow: 0 0 0 3px rgba(92,61,110,0.1);
             background: var(--surface);
         }
 
@@ -179,7 +178,7 @@
         .btn-primary:hover {
             background: var(--accent-hover);
             transform: translateY(-1px);
-            box-shadow: 0 4px 14px rgba(44,111,173,0.3);
+            box-shadow: 0 4px 14px rgba(92,61,110,0.3);
         }
 
         .btn-secondary {
@@ -189,7 +188,7 @@
         }
 
         .btn-secondary:hover {
-            background: #d6e8f7;
+            background: #e4d9ed;
             border-color: var(--accent);
         }
 
@@ -324,7 +323,7 @@
 <body>
     <nav>
         <a href="/" class="nav-logo">FormCollect</a>
-        <div class="nav-links">
+
             <a href="/creer">Nouveau</a>
             <a href="/liste">Formulaires</a>
         </div>
