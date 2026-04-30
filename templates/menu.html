@@ -3,8 +3,8 @@
 {% block content %}
 
 <!-- MESSAGE DE BIENVENUE -->
-<div style="background: var(--accent); border-radius: 14px; padding: 2.25rem 2.5rem; margin-bottom: 2.5rem; box-shadow: 0 4px 24px rgba(44,111,173,0.18);">
-    <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.6); margin-bottom: 0.75rem;">Bienvenue sur FormCollect</div>
+<div style="background: var(--accent); border-radius: 14px; padding: 2.25rem 2.5rem; margin-bottom: 2.5rem; box-shadow: 0 4px 24px rgba(92,61,110,0.18);">
+    <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.55); margin-bottom: 0.75rem;">Bienvenue sur FormCollect</div>
     <p style="font-size: 1.2rem; font-weight: 500; color: #ffffff; line-height: 1.65; letter-spacing: -0.01em; max-width: 620px;">
         Parce que chaque besoin est différent, et qu'il évolue avec le temps — vous avez ici la liberté de construire vos formulaires exactement comme vous le souhaitez, champ par champ. Cette application a été pensée pour vous simplifier la collecte de données, à votre rythme et selon vos besoins. Nous espérons vous être utile.
     </p>
@@ -16,18 +16,27 @@
 
 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; max-width:540px;">
     <a href="/creer" class="card" style="text-decoration:none; color:inherit; transition:all 0.2s; cursor:pointer; border-left: 4px solid var(--accent);"
-       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 28px rgba(44,111,173,0.15)'"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 28px rgba(92,61,110,0.15)'"
        onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div style="font-size:1.5rem; margin-bottom:0.75rem; color: var(--accent);">✦</div>
         <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.3rem; color: var(--text);">Créer un formulaire</div>
         <div style="font-size:0.8rem; color:var(--text-muted);">Nouveau formulaire avec champs personnalisés</div>
     </a>
     <a href="/liste" class="card" style="text-decoration:none; color:inherit; transition:all 0.2s; cursor:pointer; border-left: 4px solid var(--accent);"
-       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 28px rgba(44,111,173,0.15)'"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 28px rgba(92,61,110,0.15)'"
        onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div style="font-size:1.5rem; margin-bottom:0.75rem; color: var(--accent);">▤</div>
         <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.3rem; color: var(--text);">Mes formulaires</div>
         <div style="font-size:0.8rem; color:var(--text-muted);">Consulter et gérer vos formulaires</div>
+    </a>
+</div>
+
+<!-- DECONNEXION -->
+<div style="position:fixed; bottom:1.5rem; right:1.5rem;">
+    <a href="/deconnexion" style="font-size:0.8rem; color:var(--text-muted); border:1px solid var(--border); background:var(--surface); padding:0.4rem 0.85rem; border-radius:6px; text-decoration:none; transition:all 0.15s;"
+       onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'"
+       onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border)'">
+        Déconnexion
     </a>
 </div>
 
