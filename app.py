@@ -230,13 +230,34 @@ def voir_reponses(formulaire_id):
                 options = [o.strip() for o in options_brutes.split(",") if o.strip()]
                 stat_labels = options if options else list(counter.keys())
                 stat_valeurs = [counter.get(o, 0) for o in stat_labels]
+                # Interprétations select
+                interpretations = []
+                if total == 0:
+                    interpretations.append("Aucune réponse enregistrée pour ce champ.")
+                else:
+                    top = counter.most_common(1)
+                    if top:
+                        val_top, count_top = top[0]
+                        pct = round(count_top / total * 100)
+                        if pct >= 80:
+                            interpretations.append(f"L'option "{val_top}" est très largement dominante ({pct}% des réponses).")
+                        elif pct >= 50:
+                            interpretations.append(f"L'option "{val_top}" est majoritaire avec {pct}% des réponses.")
+                        else:
+                            interpretations.append(f"Les réponses sont réparties sans option clairement dominante. "{val_top}" est la plus choisie ({pct}%).")
+                    n_options_utilisees = sum(1 for v in stat_valeurs if v > 0)
+                    if n_options_utilisees == 1:
+                        interpretations.append("Une seule option a été choisie par tous les répondants.")
+                    elif n_options_utilisees == len(stat_labels):
+                        interpretations.append("Toutes les options ont été choisies au moins une fois.")
                 stats_champs[champ_id] = {
                     "label": label,
                     "type": "select",
                     "total": total,
                     "labels": stat_labels,
                     "valeurs": stat_valeurs,
-                    "frequences": counter.most_common(5)
+                    "frequences": counter.most_common(5),
+                    "interpretations": interpretations
                 }
             elif type_champ == "number":
                 import statistics
@@ -247,13 +268,12 @@ def voir_reponses(formulaire_id):
                     except ValueError:
                         pass
                 if nombres:
-                    nombres_tries = sorted(nombres)
                     moyenne = round(sum(nombres) / len(nombres), 2)
                     mediane = round(statistics.median(nombres), 2)
                     minimum = min(nombres)
                     maximum = max(nombres)
+                    etendue = round(maximum - minimum, 2)
                     ecart_type = round(statistics.stdev(nombres), 2) if len(nombres) > 1 else 0
-                    # Histogramme : 5 intervalles
                     n_bins = 5
                     step = (maximum - minimum) / n_bins if maximum != minimum else 1
                     bins = [minimum + i * step for i in range(n_bins + 1)]
@@ -268,11 +288,37 @@ def voir_reponses(formulaire_id):
                             count_bin = sum(1 for n in nombres if borne_inf <= n <= borne_sup)
                         hist_labels.append(label_bin)
                         hist_valeurs.append(count_bin)
+                    # Interprétations
+                    interpretations = []
+                    # Dispersion
+                    cv = (ecart_type / moyenne * 100) if moyenne != 0 else 0
+                    if ecart_type == 0:
+                        interpretations.append("Toutes les réponses sont identiques — aucune dispersion.")
+                    elif cv < 15:
+                        interpretations.append(f"Les réponses sont très homogènes (écart-type : {ecart_type}), les participants ont des valeurs proches.")
+                    elif cv < 40:
+                        interpretations.append(f"Les réponses présentent une dispersion modérée (écart-type : {ecart_type}).")
+                    else:
+                        interpretations.append(f"Les réponses sont très dispersées (écart-type : {ecart_type}), il existe une grande variabilité entre les participants.")
+                    # Symétrie moyenne vs médiane
+                    diff = abs(moyenne - mediane)
+                    seuil = ecart_type * 0.1 if ecart_type > 0 else 0.5
+                    if diff <= seuil:
+                        interpretations.append(f"La distribution est symétrique : moyenne ({moyenne}) et médiane ({mediane}) sont proches.")
+                    elif moyenne > mediane:
+                        interpretations.append(f"La distribution est asymétrique à droite : quelques valeurs élevées tirent la moyenne ({moyenne}) au-dessus de la médiane ({mediane}).")
+                    else:
+                        interpretations.append(f"La distribution est asymétrique à gauche : quelques valeurs basses tirent la moyenne ({moyenne}) en dessous de la médiane ({mediane}).")
+                    # Étendue
+                    if etendue == 0:
+                        interpretations.append("L'étendue est nulle — toutes les valeurs sont identiques.")
+                    else:
+                        interpretations.append(f"L'étendue des réponses est de {etendue} (de {minimum} à {maximum}).")
                 else:
-                    moyenne = mediane = minimum = maximum = ecart_type = 0
+                    moyenne = mediane = minimum = maximum = ecart_type = etendue = 0
                     hist_labels = []
                     hist_valeurs = []
-                    nombres = []
+                    interpretations = ["Aucune donnée numérique valide pour ce champ."]
                 stats_champs[champ_id] = {
                     "label": label,
                     "type": "number",
@@ -284,16 +330,35 @@ def voir_reponses(formulaire_id):
                     "ecart_type": ecart_type,
                     "labels": hist_labels,
                     "valeurs": hist_valeurs,
-                    "frequences": []
+                    "frequences": [],
+                    "interpretations": interpretations
                 }
             else:
+                # Interprétations texte
+                interpretations = []
+                if not valeurs_non_vides:
+                    interpretations.append("Aucune réponse enregistrée pour ce champ.")
+                else:
+                    top = counter.most_common(1)
+                    if top:
+                        val_top, count_top = top[0]
+                        pct = round(count_top / total * 100)
+                        if pct >= 80:
+                            interpretations.append(f"Forte convergence : {pct}% des répondants ont donné la même réponse ("{val_top}").")
+                        elif pct >= 50:
+                            interpretations.append(f"La réponse "{val_top}" est majoritaire ({pct}% des réponses).")
+                        else:
+                            interpretations.append(f"Les réponses sont variées. La plus fréquente est "{val_top}" ({pct}% des cas).")
+                    if len(counter) == total and total > 3:
+                        interpretations.append("Chaque répondant a donné une réponse unique — grande diversité des réponses.")
                 stats_champs[champ_id] = {
                     "label": label,
                     "type": type_champ,
                     "total": total,
                     "labels": [],
                     "valeurs": [],
-                    "frequences": counter.most_common(5)
+                    "frequences": counter.most_common(5),
+                    "interpretations": interpretations
                 }
 
         # Taux de complétion : % de champs remplis sur total possible

@@ -131,7 +131,6 @@
                     <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.2rem;">Écart-type</div>
                 </div>
             </div>
-            <!-- HISTOGRAMME -->
             {% if info.labels %}
             <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.75rem;">Distribution</div>
             <canvas id="chart-{{ champ_id }}" height="120"></canvas>
@@ -160,7 +159,6 @@
             {% endif %}
 
         {% else %}
-            <!-- FREQUENCES TEXTE -->
             {% if info.frequences %}
             <div style="margin-bottom:0.75rem; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Réponses les plus fréquentes</div>
             {% for valeur, count in info.frequences %}
@@ -173,6 +171,16 @@
             {% else %}
             <div style="color:var(--text-muted); font-size:0.875rem;">Aucune donnée.</div>
             {% endif %}
+        {% endif %}
+
+        <!-- INTERPRETATIONS -->
+        {% if info.interpretations %}
+        <div style="margin-top:1.25rem; padding:0.9rem 1rem; background:var(--accent-light); border-left:3px solid var(--accent); border-radius:0 7px 7px 0;">
+            <div style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent); margin-bottom:0.5rem;">Interprétation</div>
+            {% for interpretation in info.interpretations %}
+            <div style="font-size:0.875rem; color:var(--text); margin-bottom:0.25rem;">{{ interpretation }}</div>
+            {% endfor %}
+        </div>
         {% endif %}
 
     </div>
