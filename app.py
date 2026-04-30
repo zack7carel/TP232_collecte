@@ -43,10 +43,14 @@ def init_db():
     c.execute('''
         CREATE TABLE IF NOT EXISTS formulaires (
             id SERIAL PRIMARY KEY,
-            utilisateur_id INTEGER REFERENCES utilisateurs(id),
             titre TEXT NOT NULL,
             lien_unique TEXT UNIQUE NOT NULL
         )
+    ''')
+
+    c.execute('''
+        ALTER TABLE formulaires
+        ADD COLUMN IF NOT EXISTS utilisateur_id INTEGER REFERENCES utilisateurs(id)
     ''')
 
     c.execute('''
