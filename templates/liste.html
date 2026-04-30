@@ -23,7 +23,7 @@
             <a href="/f/{{ f['lien_unique'] }}" target="_blank" class="btn btn-secondary">🔗 Lien</a>
             <a href="/reponses/{{ f['id'] }}" class="btn btn-primary">Réponses</a>
             <form method="POST" action="/formulaire/{{ f['id'] }}/supprimer"
-                  onsubmit="return confirm('Supprimer « {{ f[\'titre\'] }} » et toutes ses réponses ? Cette action est irréversible.')">
+                  onsubmit="return confirm('Supprimer ce formulaire et toutes ses réponses ? Cette action est irréversible.')">
                 <button type="submit" class="btn" style="background:#f5eaf5; color:#8b3a6e; border:1px solid var(--border);">✕</button>
             </form>
         </div>
