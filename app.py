@@ -286,6 +286,21 @@ def soumettre(lien_unique):
     except Exception as e:
         print(traceback.format_exc())
         return f"ERROR SUBMIT: {e}"
+        
+# ================= SUPPRESSION FORMULAIRE =================
+@app.route("/formulaire/<int:formulaire_id>/supprimer", methods=["POST"])
+def supprimer_formulaire(formulaire_id):
+    try:
+        db = get_db()
+        c = db.cursor()
+        c.execute("DELETE FROM reponses WHERE formulaire_id = %s", (formulaire_id,))
+        c.execute("DELETE FROM champs WHERE formulaire_id = %s", (formulaire_id,))
+        c.execute("DELETE FROM formulaires WHERE id = %s", (formulaire_id,))
+        db.commit()
+        return redirect(url_for("liste_formulaires"))
+    except Exception as e:
+        print(traceback.format_exc())
+        return f"ERROR SUPPRIMER: {e}"
 
 # ================= RUN =================
 if __name__ == "__main__":
