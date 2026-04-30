@@ -2,6 +2,8 @@
 {% block title %}Réponses — {{ formulaire['titre'] }}{% endblock %}
 {% block content %}
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
 <a href="/liste" class="back-link">← Mes formulaires</a>
 
 <div class="flex items-center justify-between" style="margin-bottom:0.4rem;">
@@ -14,29 +16,130 @@
 <div class="card" style="text-align:center; padding:2.5rem; color:var(--text-muted);">
     Aucune réponse pour ce formulaire pour l'instant.
 </div>
-{% else %}
-<div class="table-wrap">
-    <table>
-        <thead>
-            <tr>
-                <th>#</th>
-                {% for label in labels %}
-                <th>{{ label }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for i, donnees in reponses_parsed %}
-            <tr>
-                <td style="color:var(--text-muted); font-family:'DM Mono',monospace; font-size:0.75rem;">{{ i }}</td>
-                {% for champ_id in champ_ids %}
-                <td>{{ donnees.get(champ_id, '—') }}</td>
-                {% endfor %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endif %}
 
+{% else %}
+
+<!-- ONGLETS -->
+<div style="display:flex; gap:0.25rem; margin-bottom:1.5rem; border-bottom:1px solid var(--border); padding-bottom:0;">
+    <button onclick="afficherOnglet('tableau')" id="tab-tableau"
+        style="padding:0.5rem 1rem; border:none; background:none; font-family:inherit; font-size:0.875rem; font-weight:500; color:var(--accent); border-bottom:2px solid var(--accent); cursor:pointer; margin-bottom:-1px;">
+        Tableau
+    </button>
+    <button onclick="afficherOnglet('analyse')" id="tab-analyse"
+        style="padding:0.5rem 1rem; border:none; background:none; font-family:inherit; font-size:0.875rem; font-weight:500; color:var(--text-muted); border-bottom:2px solid transparent; cursor:pointer; margin-bottom:-1px;">
+        Analyse
+    </button>
+</div>
+
+<!-- ONGLET TABLEAU -->
+<div id="onglet-tableau">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    {% for label in labels %}
+                    <th>{{ label }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for i, donnees in reponses_parsed %}
+                <tr>
+                    <td style="color:var(--text-muted); font-family:'DM Mono',monospace; font-size:0.75rem;">{{ i }}</td>
+                    {% for champ_id in champ_ids %}
+                    <td>{{ donnees.get(champ_id, '—') }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ONGLET ANALYSE -->
+<div id="onglet-analyse" style="display:none;">
+
+    <!-- STATS GLOBALES -->
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:2rem;">
+        <div class="card" style="text-align:center; padding:1.25rem;">
+            <div style="font-size:2rem; font-weight:600; color:var(--accent);">{{ reponses|length }}</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">Réponses collectées</div>
+        </div>
+        <div class="card" style="text-align:center; padding:1.25rem;">
+            <div style="font-size:2rem; font-weight:600; color:var(--accent);">{{ labels|length }}</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">Champs au total</div>
+        </div>
+        <div class="card" style="text-align:center; padding:1.25rem;">
+            <div style="font-size:2rem; font-weight:600; color:var(--accent);">{{ stats.taux_completion }}%</div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">Taux de complétion</div>
+        </div>
+    </div>
+
+    <!-- ANALYSE PAR CHAMP -->
+    {% for champ_id, info in stats.champs.items() %}
+    <div class="card" style="margin-bottom:1.25rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h2 style="margin:0;">{{ info.label }}</h2>
+            <span class="badge">{{ info.total }} réponse{{ 's' if info.total != 1 }}</span>
+        </div>
+
+        {% if info.type == 'select' or info.type == 'radio' %}
+            <!-- GRAPHIQUE EN BARRES -->
+            <canvas id="chart-{{ champ_id }}" height="120"></canvas>
+            <script>
+            new Chart(document.getElementById('chart-{{ champ_id }}'), {
+                type: 'bar',
+                data: {
+                    labels: {{ info.labels | tojson }},
+                    datasets: [{
+                        data: {{ info.valeurs | tojson }},
+                        backgroundColor: 'rgba(92,61,110,0.7)',
+                        borderColor: 'rgba(92,61,110,1)',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+            </script>
+
+        {% else %}
+            <!-- FREQUENCES TEXTE -->
+            {% if info.frequences %}
+            <div style="margin-bottom:0.75rem; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Réponses les plus fréquentes</div>
+            {% for valeur, count in info.frequences %}
+            <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;">
+                <div style="flex:1; font-size:0.875rem;">{{ valeur if valeur else '—' }}</div>
+                <div style="width:{{ (count / info.total * 100) | int }}%; max-width:200px; height:6px; background:var(--accent); border-radius:3px; opacity:0.7;"></div>
+                <div style="font-size:0.75rem; color:var(--text-muted); width:30px; text-align:right;">{{ count }}</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="color:var(--text-muted); font-size:0.875rem;">Aucune donnée.</div>
+            {% endif %}
+        {% endif %}
+
+    </div>
+    {% endfor %}
+
+</div>
+
+<script>
+function afficherOnglet(nom) {
+    document.getElementById('onglet-tableau').style.display = nom === 'tableau' ? 'block' : 'none';
+    document.getElementById('onglet-analyse').style.display = nom === 'analyse' ? 'block' : 'none';
+    document.getElementById('tab-tableau').style.color = nom === 'tableau' ? 'var(--accent)' : 'var(--text-muted)';
+    document.getElementById('tab-analyse').style.color = nom === 'analyse' ? 'var(--accent)' : 'var(--text-muted)';
+    document.getElementById('tab-tableau').style.borderBottomColor = nom === 'tableau' ? 'var(--accent)' : 'transparent';
+    document.getElementById('tab-analyse').style.borderBottomColor = nom === 'analyse' ? 'var(--accent)' : 'transparent';
+}
+</script>
+
+{% endif %}
 {% endblock %}

@@ -205,11 +205,61 @@ def voir_reponses(formulaire_id):
         c.execute("SELECT * FROM champs WHERE formulaire_id = %s ORDER BY ordre", (formulaire_id,))
         champs_list = c.fetchall()
         champs = {str(ch["id"]): ch["label"] for ch in champs_list}
+        champs_info = {str(ch["id"]): ch for ch in champs_list}
 
         c.execute("SELECT * FROM reponses WHERE formulaire_id = %s ORDER BY id ASC", (formulaire_id,))
         reponses = c.fetchall()
 
         reponses_parsed = [(i, json.loads(rep["donnees"])) for i, rep in enumerate(reponses, 1)]
+
+        # ---- STATISTIQUES DESCRIPTIVES ----
+        from collections import Counter
+
+        stats_champs = {}
+        total_reps = len(reponses)
+
+        for champ_id, label in champs.items():
+            type_champ = champs_info[champ_id]["type_champ"]
+            valeurs = [json.loads(r["donnees"]).get(champ_id, "") for r in reponses]
+            valeurs_non_vides = [v for v in valeurs if v.strip()]
+            total = len(valeurs_non_vides)
+            counter = Counter(valeurs_non_vides)
+
+            if type_champ == "select":
+                options_brutes = champs_info[champ_id]["options"] or ""
+                options = [o.strip() for o in options_brutes.split(",") if o.strip()]
+                stat_labels = options if options else list(counter.keys())
+                stat_valeurs = [counter.get(o, 0) for o in stat_labels]
+                stats_champs[champ_id] = {
+                    "label": label,
+                    "type": "select",
+                    "total": total,
+                    "labels": stat_labels,
+                    "valeurs": stat_valeurs,
+                    "frequences": counter.most_common(5)
+                }
+            else:
+                stats_champs[champ_id] = {
+                    "label": label,
+                    "type": type_champ,
+                    "total": total,
+                    "labels": [],
+                    "valeurs": [],
+                    "frequences": counter.most_common(5)
+                }
+
+        # Taux de complétion : % de champs remplis sur total possible
+        total_possible = total_reps * len(champs)
+        total_remplis = sum(
+            sum(1 for v in json.loads(r["donnees"]).values() if v.strip())
+            for r in reponses
+        ) if reponses else 0
+        taux = round((total_remplis / total_possible * 100) if total_possible > 0 else 0)
+
+        stats = {
+            "taux_completion": taux,
+            "champs": stats_champs
+        }
 
         return render_template(
             "reponses.html",
@@ -217,7 +267,8 @@ def voir_reponses(formulaire_id):
             reponses=reponses,
             reponses_parsed=reponses_parsed,
             labels=list(champs.values()),
-            champ_ids=list(champs.keys())
+            champ_ids=list(champs.keys()),
+            stats=stats
         )
 
     except Exception as e:
