@@ -84,7 +84,7 @@
             <span class="badge">{{ info.total }} réponse{{ 's' if info.total != 1 }}</span>
         </div>
 
-        {% if info.type == 'select' or info.type == 'radio' %}
+        {% if info.type == 'select' %}
             <!-- GRAPHIQUE EN BARRES -->
             <canvas id="chart-{{ champ_id }}" height="120"></canvas>
             <script>
@@ -102,12 +102,62 @@
                 },
                 options: {
                     plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+            </script>
+
+        {% elif info.type == 'number' %}
+            <!-- STATS QUANTITATIVES -->
+            <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:0.75rem; margin-bottom:1.25rem;">
+                <div style="text-align:center; padding:0.75rem; background:var(--bg); border-radius:8px;">
+                    <div style="font-size:1.25rem; font-weight:600; color:var(--accent);">{{ info.moyenne }}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.2rem;">Moyenne</div>
+                </div>
+                <div style="text-align:center; padding:0.75rem; background:var(--bg); border-radius:8px;">
+                    <div style="font-size:1.25rem; font-weight:600; color:var(--accent);">{{ info.mediane }}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.2rem;">Médiane</div>
+                </div>
+                <div style="text-align:center; padding:0.75rem; background:var(--bg); border-radius:8px;">
+                    <div style="font-size:1.25rem; font-weight:600; color:var(--accent);">{{ info.minimum }}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.2rem;">Minimum</div>
+                </div>
+                <div style="text-align:center; padding:0.75rem; background:var(--bg); border-radius:8px;">
+                    <div style="font-size:1.25rem; font-weight:600; color:var(--accent);">{{ info.maximum }}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.2rem;">Maximum</div>
+                </div>
+                <div style="text-align:center; padding:0.75rem; background:var(--bg); border-radius:8px;">
+                    <div style="font-size:1.25rem; font-weight:600; color:var(--accent);">{{ info.ecart_type }}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.2rem;">Écart-type</div>
+                </div>
+            </div>
+            <!-- HISTOGRAMME -->
+            {% if info.labels %}
+            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.75rem;">Distribution</div>
+            <canvas id="chart-{{ champ_id }}" height="120"></canvas>
+            <script>
+            new Chart(document.getElementById('chart-{{ champ_id }}'), {
+                type: 'bar',
+                data: {
+                    labels: {{ info.labels | tojson }},
+                    datasets: [{
+                        data: {{ info.valeurs | tojson }},
+                        backgroundColor: 'rgba(168,126,176,0.7)',
+                        borderColor: 'rgba(92,61,110,1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
                     scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                        x: { grid: { display: false } }
                     }
                 }
             });
             </script>
+            {% endif %}
 
         {% else %}
             <!-- FREQUENCES TEXTE -->

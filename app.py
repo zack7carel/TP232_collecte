@@ -238,6 +238,54 @@ def voir_reponses(formulaire_id):
                     "valeurs": stat_valeurs,
                     "frequences": counter.most_common(5)
                 }
+            elif type_champ == "number":
+                import statistics
+                nombres = []
+                for v in valeurs_non_vides:
+                    try:
+                        nombres.append(float(v))
+                    except ValueError:
+                        pass
+                if nombres:
+                    nombres_tries = sorted(nombres)
+                    moyenne = round(sum(nombres) / len(nombres), 2)
+                    mediane = round(statistics.median(nombres), 2)
+                    minimum = min(nombres)
+                    maximum = max(nombres)
+                    ecart_type = round(statistics.stdev(nombres), 2) if len(nombres) > 1 else 0
+                    # Histogramme : 5 intervalles
+                    n_bins = 5
+                    step = (maximum - minimum) / n_bins if maximum != minimum else 1
+                    bins = [minimum + i * step for i in range(n_bins + 1)]
+                    hist_labels = []
+                    hist_valeurs = []
+                    for i in range(n_bins):
+                        borne_inf = bins[i]
+                        borne_sup = bins[i + 1]
+                        label_bin = f"{round(borne_inf,1)}–{round(borne_sup,1)}"
+                        count_bin = sum(1 for n in nombres if borne_inf <= n < borne_sup)
+                        if i == n_bins - 1:
+                            count_bin = sum(1 for n in nombres if borne_inf <= n <= borne_sup)
+                        hist_labels.append(label_bin)
+                        hist_valeurs.append(count_bin)
+                else:
+                    moyenne = mediane = minimum = maximum = ecart_type = 0
+                    hist_labels = []
+                    hist_valeurs = []
+                    nombres = []
+                stats_champs[champ_id] = {
+                    "label": label,
+                    "type": "number",
+                    "total": total,
+                    "moyenne": moyenne,
+                    "mediane": mediane,
+                    "minimum": minimum,
+                    "maximum": maximum,
+                    "ecart_type": ecart_type,
+                    "labels": hist_labels,
+                    "valeurs": hist_valeurs,
+                    "frequences": []
+                }
             else:
                 stats_champs[champ_id] = {
                     "label": label,
